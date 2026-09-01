@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 
 #include "audio/HakuiAudio.hpp"
+#include "avatar/BodyProfileController.hpp"
 #include "avatar/HakuiSkeleton.hpp"
 #include "combat/CombatSimulation.hpp"
 #include "games/GameTerminal.hpp"
@@ -88,6 +89,7 @@ private:
     std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
     HakuiSkeleton avatarSkeleton_;
+    hakui::avatar::BodyProfileController bodyProfile_{};
     HakuiAudio audio_;
     hakui::input::SdlInputBridge inputBridge_;
     hakui::input::InputFrame inputFrame_{};
