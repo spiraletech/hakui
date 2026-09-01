@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(hakui_avatar_profile STATIC
     src/avatar/BodyProfile.cpp
+    src/avatar/BodyProfileController.cpp
 )
 
 target_include_directories(hakui_avatar_profile
@@ -24,4 +25,10 @@ if(BUILD_TESTING)
     )
     target_link_libraries(hakui_body_profile_spec PRIVATE hakui_avatar_profile)
     add_test(NAME hakui_body_profile_spec COMMAND hakui_body_profile_spec)
+
+    add_executable(hakui_body_profile_controller_spec
+        tests/hakui/BodyProfileControllerSpec.cpp
+    )
+    target_link_libraries(hakui_body_profile_controller_spec PRIVATE hakui_avatar_profile)
+    add_test(NAME hakui_body_profile_controller_spec COMMAND hakui_body_profile_controller_spec)
 endif()
