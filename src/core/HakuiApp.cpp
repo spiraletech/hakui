@@ -172,6 +172,19 @@ bool HakuiApp::boot()
         return false;
     }
 
+    if (const char* requestedBody = SDL_getenv("HAKUI_BODY_PROFILE");
+        requestedBody && requestedBody[0] != '\0') {
+        if (!bodyProfile_.setFromName(requestedBody)) {
+            SDL_LogWarn(
+                SDL_LOG_CATEGORY_APPLICATION,
+                "[HAKUI] unknown HAKUI_BODY_PROFILE '%s' // using %.*s",
+                requestedBody,
+                static_cast<int>(bodyProfile_.active().name.size()),
+                bodyProfile_.active().name.data()
+            );
+        }
+    }
+
     initSpiralCore();
     terminal_ = std::make_shared<hakui::games::GameTerminal>(
         7001,
@@ -203,10 +216,15 @@ bool HakuiApp::boot()
     SDL_Log("[HAKUI] DATA GRUNGE // ACTIVE");
     SDL_Log("[HAKUI] SPIRAL CORE // ONLINE");
     SDL_Log("[HAKUI] avatar skeleton // %zu bones loaded", avatarSkeleton_.boneCount());
+    SDL_Log(
+        "[HAKUI] body profile // %.*s // runtime-selectable",
+        static_cast<int>(bodyProfile_.active().name.size()),
+        bodyProfile_.active().name.data()
+    );
     SDL_Log("[HAKUI] v1.01 social glass // speech floats with the speaker");
     SDL_Log("[HAKUI] procedural locomotion // idle + walk + sprint + jump + seated online");
     SDL_Log("[HAKUI] BLACK ROOM // neon lounge + couch + fusion table + open void");
-    SDL_Log("[HAKUI] controls // WASD move // SPACE jump // E interact/stand // SHIFT sprint");
+    SDL_Log("[HAKUI] controls // WASD move // SPACE jump // E interact/stand // SHIFT sprint // F6 body");
     SDL_Log("[HAKUI] camera // RMB orbit // WHEEL zoom // R reset");
     SDL_Log("[HAKUI] menu // ESC pause // [ ] look sensitivity // - + audio // F10 quit");
     SDL_Log("[HAKUI] ride interface // controller native // keyboard fallback F9 developer-only");
@@ -345,6 +363,7 @@ void HakuiApp::initSpiralCore()
         {"client.status", std::string("online")},
         {"client.version", std::string("0.861-dev")},
         {"avatar.rig.bones", static_cast<std::int64_t>(avatarSkeleton_.boneCount())},
+        {"avatar.body_profile", std::string(bodyProfile_.active().name)},
         {"player.locomotion", std::string("on_foot")}
     };
     spiral_.dispatch(std::move(initialState));
@@ -1442,6 +1461,27 @@ SDL_AppResult HakuiApp::handleEvent(const SDL_Event& event)
         return SDL_APP_CONTINUE;
     }
 
+    if (!paused_ && event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat &&
+        event.key.scancode == SDL_SCANCODE_F6) {
+        bodyProfile_.toggle();
+        const std::string profileName{bodyProfile_.active().name};
+        showInputStatus("BODY PROFILE // " + profileName);
+        SDL_Log("[HAKUI] body profile // %s", profileName.c_str());
+        recordObserverEvent("avatar.body_profile", profileName);
+
+        spiral::Signal signal;
+        signal.kind = spiral::SignalKind::State;
+        signal.source = "hakui.avatar";
+        signal.destination = "spiral.core";
+        signal.topic = "avatar.body_profile.changed";
+        signal.payload = profileName;
+        signal.statePatch = {
+            {"avatar.body_profile", profileName}
+        };
+        spiral_.dispatch(std::move(signal));
+        return SDL_APP_CONTINUE;
+    }
+
     inputBridge_.observeEvent(event);
 
     if (!paused_ && event.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
@@ -2153,6 +2193,7 @@ bool HakuiApp::render()
     }
 
     HakuiSceneState scene;
+    scene.playerBodyProfile = bodyProfile_.activeId();
     scene.paused = paused_;
     scene.rideable = rideable_.state();
     scene.chatInputActive = chat_.inputActive();

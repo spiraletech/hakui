@@ -1480,6 +1480,15 @@ bool DebugWorldRenderer::render(
         ), palette);
     };
 
+    const hakui::avatar::BodyProfile& activeBody = scene.mannequinLab
+        ? (scene.mannequinFemale
+            ? hakui::avatar::femaleBodyProfile()
+            : hakui::avatar::maleBodyProfile())
+        : hakui::avatar::bodyProfile(scene.playerBodyProfile);
+    const auto bodyVec = [](const hakui::avatar::Vec3f& value) {
+        return Vec3{value.x, value.y, value.z};
+    };
+
     auto leg = [&](float side, float angle, float kneeAngle) {
         const Vec3 hip{side * 0.23f, 1.17f, 0.0f};
         const Mat4 upper = multiply(
@@ -1488,7 +1497,7 @@ bool DebugWorldRenderer::render(
         );
         drawModel(multiply(upper,
             multiply(translation({0.0f, -0.38f, 0.0f}),
-                     scale({0.30f, 0.76f, 0.34f}))), Shell);
+                     scale({activeBody.thighRadius, 0.76f, activeBody.thighRadius}))), Shell);
 
         const Mat4 lower = multiply(
             upper,
@@ -1496,18 +1505,18 @@ bool DebugWorldRenderer::render(
         );
         drawModel(multiply(lower,
             multiply(translation({0.0f, -0.37f, 0.0f}),
-                     scale({0.28f, 0.74f, 0.30f}))), Shell);
+                     scale({activeBody.calfRadius, 0.74f, activeBody.calfRadius}))), Shell);
         drawModel(multiply(lower,
             multiply(translation({0.0f, -0.76f, 0.14f}),
-                     scale({0.32f, 0.16f, 0.58f}))), Cyan);
+                     scale(bodyVec(activeBody.footSize)))), Cyan);
     };
 
     auto arm = [&](float side, float angle) {
         hingedBox(
-            {side * 0.60f, 2.12f, 0.0f},
+            {side * activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f},
             angle,
             {0.0f, -0.50f, 0.0f},
-            {0.24f, 1.00f, 0.28f}
+            {activeBody.upperArmRadius, 1.00f, activeBody.upperArmRadius}
         );
     };
 
@@ -1606,18 +1615,8 @@ bool DebugWorldRenderer::render(
             (hip.y + target.y) * 0.5f + 0.12f - flex * 0.055f,
             (hip.z + target.z) * 0.5f + bendForward.z * bend + outward.z * 0.045f
         };
-        contactSegment(
-            hip, knee,
-            scene.mannequinLab
-                ? (scene.mannequinFemale ? 0.205f : 0.188f)
-                : 0.27f
-        );
-        contactSegment(
-            knee, target,
-            scene.mannequinLab
-                ? (scene.mannequinFemale ? 0.132f : 0.145f)
-                : 0.25f
-        );
+        contactSegment(hip, knee, activeBody.thighRadius);
+        contactSegment(knee, target, activeBody.calfRadius);
         if (scene.mannequinLab && scene.mannequinShowJoints) {
             localBox(hip, {0.12f, 0.12f, 0.12f}, Amber);
             localBox(knee, {0.13f, 0.13f, 0.13f}, Magenta);
@@ -1628,11 +1627,7 @@ bool DebugWorldRenderer::render(
             {target.x + footForward.x,
              target.y + 0.06f,
              target.z + footForward.z},
-            scene.mannequinLab
-                ? (scene.mannequinFemale
-                    ? Vec3{0.185f, 0.082f, 0.330f}
-                    : Vec3{0.205f, 0.095f, 0.360f})
-                : Vec3{0.32f, 0.14f, 0.50f},
+            bodyVec(activeBody.footSize),
             footYaw,
             Cyan
         );
@@ -1644,33 +1639,17 @@ bool DebugWorldRenderer::render(
                           float elbowFlex) {
         target.y -= groundContact.visualRootAbovePlayerBase;
         const Vec3 shoulder = rotateYawPoint(
-            scene.mannequinLab
-                ? (scene.mannequinFemale
-                    ? Vec3{side * 0.46f, 2.02f, 0.0f}
-                    : Vec3{side * 0.52f, 2.04f, 0.0f})
-                : Vec3{side * 0.60f, 2.12f, 0.0f},
+            {side * activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f},
             shoulderYaw
         );
-        const float elbowOut = scene.mannequinLab
-            ? (scene.mannequinFemale ? 0.060f : 0.075f)
-            : 0.12f;
+        const float elbowOut = activeBody.elbowOut;
         const Vec3 elbow{
             (shoulder.x + target.x) * 0.5f + side * elbowOut,
             (shoulder.y + target.y) * 0.5f - 0.04f - elbowFlex * 0.06f,
             (shoulder.z + target.z) * 0.5f - 0.08f - elbowFlex * 0.08f
         };
-        contactSegment(
-            shoulder, elbow,
-            scene.mannequinLab
-                ? (scene.mannequinFemale ? 0.132f : 0.145f)
-                : 0.23f
-        );
-        contactSegment(
-            elbow, target,
-            scene.mannequinLab
-                ? (scene.mannequinFemale ? 0.094f : 0.112f)
-                : 0.21f
-        );
+        contactSegment(shoulder, elbow, activeBody.upperArmRadius);
+        contactSegment(elbow, target, activeBody.forearmRadius);
         if (scene.mannequinLab && scene.mannequinShowJoints) {
             localBox(shoulder, {0.12f, 0.12f, 0.12f}, Amber);
             localBox(elbow, {0.12f, 0.12f, 0.12f}, Magenta);
@@ -1678,11 +1657,7 @@ bool DebugWorldRenderer::render(
         }
         localBox(
             target,
-            scene.mannequinLab
-                ? (scene.mannequinFemale
-                    ? Vec3{0.115f, 0.095f, 0.135f}
-                    : Vec3{0.135f, 0.115f, 0.150f})
-                : Vec3{0.24f, 0.20f, 0.24f},
+            bodyVec(activeBody.handSize),
             Midnight
         );
     };
@@ -1757,29 +1732,21 @@ bool DebugWorldRenderer::render(
              (ridingSkateboard ? 0.20f : 0.10f) -
              scene.rideable.body.landingCompression * 0.18f,
          0.0f},
-        scene.mannequinLab
-            ? (scene.mannequinFemale
-                ? Vec3{0.64f, 0.22f, 0.36f}
-                : Vec3{0.54f, 0.20f, 0.32f})
-            : Vec3{0.74f, 0.30f, 0.44f},
+        bodyVec(activeBody.pelvisSize),
         poseDriven ? scene.rideable.body.pelvisYawRelativeToBoard : 0.0f,
         Midnight
     );
-    if (scene.mannequinLab) {
-        // Upper pelvis/waist bridge: stacked geometry gives the lab body
-        // a simple wedge transition instead of torso -> belt -> legs.
-        orientedLocalBox(
-            {0.0f,
-             1.32f - scene.rideable.body.preloadPoseWeight * 0.16f -
-                 scene.rideable.body.landingCompression * 0.13f,
-             0.0f},
-            scene.mannequinFemale
-                ? Vec3{0.40f, 0.13f, 0.29f}
-                : Vec3{0.46f, 0.13f, 0.30f},
-            scene.rideable.body.pelvisYawRelativeToBoard,
-            Midnight
-        );
-    }
+    // Shared pelvis-to-waist bridge. This is presentation only and follows
+    // the active body profile without changing gameplay contact targets.
+    orientedLocalBox(
+        {0.0f,
+         1.32f - scene.rideable.body.preloadPoseWeight * 0.16f -
+             scene.rideable.body.landingCompression * 0.13f,
+         0.0f},
+        bodyVec(activeBody.waistBridgeSize),
+        scene.rideable.body.pelvisYawRelativeToBoard,
+        Midnight
+    );
 
     const bool attackRelease = scene.combatActive &&
         scene.playerCombatState == hakui::combat::CombatState::Release;
@@ -1821,71 +1788,44 @@ bool DebugWorldRenderer::render(
                             bodySway + expressiveRideSway + impactLean +
                             bodyAssistVisual + socialTorsoRoll
                         ),
-                        scale({
-                            scene.mannequinLab
-                                ? (scene.mannequinFemale ? 0.54f : 0.58f)
-                                : 0.92f,
-                            scene.mannequinLab
-                                ? (scene.mannequinFemale ? 0.84f : 0.86f)
-                                : 0.94f,
-                            scene.mannequinLab
-                                ? (scene.mannequinFemale ? 0.30f : 0.31f)
-                                : 0.48f
-                        })
+                        scale(bodyVec(activeBody.torsoFrame))
                     )
                 )
             )
         )
     );
     const Uint32 torsoPalette = scene.playerHitPulse > 0.0f ? Danger : Shell;
-    if (scene.mannequinLab) {
-        drawModel(
+    drawModel(
+        multiply(
+            torso,
             multiply(
-                torso,
-                multiply(
-                    translation({0.0f, 0.18f, 0.0f}),
-                    scale({
-                        scene.mannequinFemale ? 1.16f : 1.24f,
-                        0.58f,
-                        scene.mannequinFemale ? 1.08f : 1.10f
-                    })
-                )
-            ),
-            torsoPalette
-        );
-        drawModel(
+                translation({0.0f, 0.18f, 0.0f}),
+                scale({activeBody.ribcageWidthScale, 0.58f, activeBody.ribcageDepthScale})
+            )
+        ),
+        torsoPalette
+    );
+    drawModel(
+        multiply(
+            torso,
             multiply(
-                torso,
-                multiply(
-                    translation({0.0f, -0.28f, 0.0f}),
-                    scale({
-                        scene.mannequinFemale ? 0.72f : 0.86f,
-                        0.38f,
-                        scene.mannequinFemale ? 0.92f : 0.96f
-                    })
-                )
-            ),
-            torsoPalette
-        );
-    } else {
-        drawModel(torso, torsoPalette);
-    }
+                translation({0.0f, -0.28f, 0.0f}),
+                scale({activeBody.waistWidthScale, 0.38f, activeBody.waistDepthScale})
+            )
+        ),
+        torsoPalette
+    );
 
-    if (scene.mannequinLab) {
-        const float torsoYaw = scene.rideable.body.torsoYawRelativeToBoard;
-        const Vec3 clavicleCenter = rotateYawPoint({0.0f, 2.12f, 0.0f}, torsoYaw);
-        const float clavicleSpread = scene.mannequinFemale ? 0.46f : 0.52f;
-        const float clavicleY = scene.mannequinFemale ? 2.02f : 2.04f;
-        const Vec3 leftShoulder = rotateYawPoint(
-            {-clavicleSpread, clavicleY, 0.0f}, torsoYaw
-        );
-        const Vec3 rightShoulder = rotateYawPoint(
-            {clavicleSpread, clavicleY, 0.0f}, torsoYaw
-        );
-        const float clavicleWidth = scene.mannequinFemale ? 0.082f : 0.095f;
-        contactSegment(clavicleCenter, leftShoulder, clavicleWidth, Shell);
-        contactSegment(clavicleCenter, rightShoulder, clavicleWidth, Shell);
-    }
+    const float torsoYaw = scene.rideable.body.torsoYawRelativeToBoard;
+    const Vec3 clavicleCenter = rotateYawPoint({0.0f, 2.12f, 0.0f}, torsoYaw);
+    const Vec3 leftShoulder = rotateYawPoint(
+        {-activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f}, torsoYaw
+    );
+    const Vec3 rightShoulder = rotateYawPoint(
+        {activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f}, torsoYaw
+    );
+    contactSegment(clavicleCenter, leftShoulder, activeBody.clavicleRadius, Shell);
+    contactSegment(clavicleCenter, rightShoulder, activeBody.clavicleRadius, Shell);
 
     float leftArmAngle = (seated ? -0.62f : 0.0f) + counterGait * armStride;
     float rightArmAngle = (seated ? -0.62f : 0.0f) + gait * armStride;
@@ -2037,20 +1977,12 @@ bool DebugWorldRenderer::render(
     };
     socialHeadBox(
         {0.0f, 2.28f + idleBreath - rideCompression, 0.0f},
-        scene.mannequinLab
-            ? (scene.mannequinFemale
-                ? Vec3{0.125f, 0.190f, 0.125f}
-                : Vec3{0.145f, 0.205f, 0.145f})
-            : Vec3{0.22f, 0.18f, 0.22f},
+        bodyVec(activeBody.neckSize),
         scene.mannequinLab ? Shell : Cyan
     );
     socialHeadBox(
         {0.0f, 2.60f + idleBreath - rideCompression, 0.0f},
-        scene.mannequinLab
-            ? (scene.mannequinFemale
-                ? Vec3{0.39f, 0.47f, 0.37f}
-                : Vec3{0.42f, 0.50f, 0.40f})
-            : Vec3{0.56f, 0.58f, 0.52f},
+        bodyVec(activeBody.headSize),
         Shell
     );
 
