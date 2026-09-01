@@ -18,8 +18,9 @@ replace_once(
     "    ${CMAKE_CURRENT_LIST_DIR}/../src/avatar/AvatarGroundContact.cpp\n",
     "add_library(hakui_avatar_rig STATIC\n"
     "    ${CMAKE_CURRENT_LIST_DIR}/../src/avatar/BodyProfile.cpp\n"
+    "    ${CMAKE_CURRENT_LIST_DIR}/../src/avatar/BodyProfileController.cpp\n"
     "    ${CMAKE_CURRENT_LIST_DIR}/../src/avatar/AvatarGroundContact.cpp\n",
-    "compile runtime BodyProfile with the canonical avatar rig",
+    "compile runtime body profiles with the canonical avatar rig",
 )
 
 replace_once(
@@ -33,19 +34,27 @@ replace_once(
     "    endif()\n"
     "endif()\n\n"
     "add_executable(hakui_body_profile_spec\n"
-    "    ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/BodyProfileSpec.cpp\n"
+    "    ${CMAKE_CURRENT_LIST_DIR}/../tests/BodyProfileSpec.cpp\n"
     ")\n"
     "target_compile_features(hakui_body_profile_spec PRIVATE cxx_std_20)\n"
     "target_link_libraries(hakui_body_profile_spec PRIVATE hakui_avatar_rig)\n"
+    "add_executable(hakui_body_profile_controller_spec\n"
+    "    ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/BodyProfileControllerSpec.cpp\n"
+    ")\n"
+    "target_compile_features(hakui_body_profile_controller_spec PRIVATE cxx_std_20)\n"
+    "target_link_libraries(hakui_body_profile_controller_spec PRIVATE hakui_avatar_rig)\n"
     "if(MSVC)\n"
     "    target_compile_options(hakui_body_profile_spec PRIVATE /W4 /permissive- /UNDEBUG)\n"
+    "    target_compile_options(hakui_body_profile_controller_spec PRIVATE /W4 /permissive- /UNDEBUG)\n"
     "else()\n"
     "    target_compile_options(hakui_body_profile_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)\n"
+    "    target_compile_options(hakui_body_profile_controller_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)\n"
     "endif()\n"
     "if(BUILD_TESTING)\n"
     "    add_test(NAME hakui.body_profiles COMMAND hakui_body_profile_spec)\n"
+    "    add_test(NAME hakui.body_profile_controller COMMAND hakui_body_profile_controller_spec)\n"
     "endif()\n",
-    "register male/female body-profile contract",
+    "register runtime body-profile contracts",
 )
 
 marker = Path("docs/CANONICAL_SOURCE.md")
