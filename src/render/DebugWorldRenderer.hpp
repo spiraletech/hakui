@@ -8,6 +8,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "avatar/BodyProfile.hpp"
 #include "camera/ThirdPersonCameraRig.hpp"
 #include "combat/CombatSimulation.hpp"
 #include "player/PlayerState.hpp"
@@ -38,6 +39,7 @@ struct HakuiSceneState {
     bool mannequinShowJoints = false;
     std::uint8_t mannequinPosePreset = 0;
     std::string_view mannequinPoseLabel{"NEUTRAL"};
+    hakui::avatar::BodyProfileId playerBodyProfile = hakui::avatar::BodyProfileId::Male;
     bool paused = false;
     bool terminalPowered = false;
     bool cardSuiteActive = false;
