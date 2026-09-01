@@ -1,0 +1,60 @@
+name: HAKUI Gameplay Bootstrap
+
+on:
+  push:
+    branches:
+      - trinity/hakui-unification-v0.1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-gameplay:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical HAKUI
+        uses: actions/checkout@v4
+        with:
+          ref: trinity/hakui-unification-v0.1
+          fetch-depth: 0
+
+      - name: Skip when gameplay snapshot is already present
+        id: gate
+        shell: bash
+        run: |
+          if [[ -f src/core/HakuiApp.cpp && -f docs/CANONICAL_SOURCE.md ]]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch pinned v1.01 gameplay lineage
+        if: steps.gate.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/spiraletech/spiral-ether-tech.git donor
+          git -C donor checkout c03da5a02b3ac288186c6468b08b5ae2e8ce55a9
+
+      - name: Promote gameplay source into canonical repository
+        if: steps.gate.outputs.needed == 'true'
+        shell: bash
+        run: |
+          rsync -a \
+            --exclude='.git' \
+            --exclude='README.md' \
+            --exclude='.github/workflows/ci.yml' \
+            donor/ ./
+          rm -rf donor
+          python tools/canonicalize_import.py
+
+      - name: Commit canonical gameplay snapshot
+        if: steps.gate.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "hakui-trinity-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Import canonical HAKUI v1.01 gameplay snapshot"
+          git push origin HEAD:trinity/hakui-unification-v0.1
