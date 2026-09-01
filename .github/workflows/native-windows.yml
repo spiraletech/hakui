@@ -1,0 +1,43 @@
+name: HAKUI Native Windows
+
+on:
+  push:
+    branches:
+      - trinity/hakui-unification-v0.1
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows-native:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure native client
+        run: cmake -S . -B build -DHAKUI_BUILD_NATIVE_CLIENT=ON -DHAKUI_ENABLE_IMVU_CAL3D=OFF -DBUILD_TESTING=ON
+
+      - name: Build native client and contracts
+        run: cmake --build build --config Release --parallel
+
+      - name: Test contracts
+        run: ctest --test-dir build --build-config Release --output-on-failure
+
+      - name: Package canonical HAKUI
+        shell: pwsh
+        run: ./packaging/windows/package.ps1 -BuildDirectory ./build -OutputDirectory ./dist
+
+      - name: Verify package contents
+        shell: pwsh
+        run: |
+          $zip = Resolve-Path ./dist/spiral-os-hakui-engine-windows-x64.zip
+          if ((Get-Item $zip).Length -lt 100000) { throw "HAKUI package is unexpectedly small" }
+          Write-Host "HAKUI package ready: $zip"
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hakui-trinity-v0.1-windows-x64
+          path: dist/spiral-os-hakui-engine-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
