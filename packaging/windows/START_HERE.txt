@@ -1,8 +1,18 @@
-SPIRAL OS: HAKUI ENGINE
-WINDOWS STARTUP PACK // v0.861 SOCIAL BUBBLE VISUAL OVERHAUL
+HAKUI
+TRINITY UNIFICATION v0.1 // v1.01 GAMEPLAY LINEAGE
 
 Run:
 SPIRAL-OS-HAKUI-ENGINE.exe
+
+BODY PROFILE:
+F6          TOGGLE MALE / FEMALE BODY PROFILE AT RUNTIME
+DEFAULT     MALE
+ENV         HAKUI_BODY_PROFILE=male or HAKUI_BODY_PROFILE=female
+STATE       avatar.body_profile
+
+Male and female are presentation profiles on ONE HAKUI skeleton and ONE gameplay
+simulation. Switching profile does not restart the world and does not replace
+movement, combat, skateboard, BMX, seating, interaction, chat, or world state.
 
 KEYBOARD + MOUSE:
 WASD        MOVE
@@ -17,6 +27,7 @@ F           CONTEXT / GRIND
 LEFT CTRL   BALANCE / MANUAL
 C           CANCEL / DISMOUNT / ENTER OR LEAVE SPAR
 R           RECOVER / CAMERA RESET
+F6          TOGGLE MALE / FEMALE BODY PROFILE
 ESC         PAUSE / RESUME
 ENTER       OPEN CHAT / SEND MESSAGE
 BACKSPACE   EDIT CHAT BUFFER
