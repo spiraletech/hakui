@@ -1,0 +1,45 @@
+name: HAKUI Runtime Body Profiles
+
+on:
+  push:
+    branches:
+      - trinity/hakui-unification-v0.1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-runtime-profile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical HAKUI
+        uses: actions/checkout@v4
+        with:
+          ref: trinity/hakui-unification-v0.1
+          fetch-depth: 0
+
+      - name: Detect migration state
+        id: gate
+        shell: bash
+        run: |
+          if [[ -f docs/RUNTIME_BODY_PROFILES.md ]]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply runtime body-profile migration
+        if: steps.gate.outputs.needed == 'true'
+        run: python tools/apply_runtime_body_profiles_v01.py
+
+      - name: Commit runtime body profiles
+        if: steps.gate.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "hakui-trinity-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/core/HakuiApp.cpp src/render/DebugWorldRenderer.cpp docs/RUNTIME_BODY_PROFILES.md
+          git commit -m "Unify HAKUI male and female runtime body profiles"
+          git push origin HEAD:trinity/hakui-unification-v0.1
