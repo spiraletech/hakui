@@ -73,9 +73,6 @@ const auto kSpecimenGeometry = std::to_array<WorldPrimitive>({
     {WorldPrimitiveKind::Furniture, MaterialRole::PowderConcrete,
      4.90f, 0.73f, 4.30f, 1.25f, 0.22f, 0.82f,
      0.0f, 0.0f, 0.0f, 2, 1.40f, 0.0f, 0.0f},
-    {WorldPrimitiveKind::Furniture, MaterialRole::PowderConcrete,
-     6.54f, 0.73f, 4.30f, 1.25f, 0.22f, 0.82f,
-     0.0f, 0.0f, 0.0f, 2, 1.40f, 0.0f, 0.0f},
 
     // Mobility datum beside spawn: small physical silhouettes reinforce the
     // 2/3 mode HUD without turning the room into a vehicle showroom.
