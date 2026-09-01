@@ -30,6 +30,10 @@ jobs:
             echo "needed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Prepare deterministic patch driver
+        if: steps.gate.outputs.needed == 'true'
+        run: python tools/prepare_runtime_body_patch_driver.py
+
       - name: Apply runtime body-profile migration
         if: steps.gate.outputs.needed == 'true'
         run: python tools/apply_runtime_body_profiles_v01.py
