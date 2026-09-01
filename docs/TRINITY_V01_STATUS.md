@@ -13,6 +13,7 @@
 - gameplay authority remains shared: locomotion, combat, skateboard, BMX, seating, interaction, chat, world and collision are not forked by body profile
 - Linux and Windows dependency-free contracts are validated in CI
 - Windows native build/test/package workflow produces a runnable package
+- manual body-profile smoke test passed visually; the extended Void Couch regression was isolated to duplicated seat geometry and repaired without changing avatar/runtime logic
 
 ## Validation gate before merge
 
