@@ -64,6 +64,8 @@ ctest --test-dir build --build-config Release --output-on-failure
 
 GitHub Actions publishes a Windows x64 package from the Trinity branch containing `SPIRAL-OS-HAKUI-ENGINE.exe`, `SDL3.dll`, and `START_HERE.txt`.
 
+Implementation/acceptance status is tracked in `docs/TRINITY_V01_STATUS.md`.
+
 ## Trinity direction
 
 ```text
