@@ -20,6 +20,7 @@
 #include "render/DebugWorldRenderer.hpp"
 #include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
+#include "spiral/hakui/HakuiAdapter.hpp"
 #include "systems/LocomotionRouter.hpp"
 
 class HakuiApp {
@@ -92,6 +93,11 @@ private:
     PlayerState& player_ = runtime_.player();
     hakui::PlayerMovementController& movement_ = runtime_.movement();
     hakui::RideableMovementController& rideable_ = runtime_.rideable();
+
+    // L7 read-only perception boundary. The native client owns one adapter
+    // bound to the authoritative runtime. It can capture/inspect HakuiSnapshot
+    // truth but has no mutation, interaction-execution or Spiral-write path.
+    hakui::HakuiAdapter hakuiAdapter_{runtime_};
 
     // Execution + Spiral telemetry are separate from target membership. The
     // service is wired to the registry owned by GameRuntime.
