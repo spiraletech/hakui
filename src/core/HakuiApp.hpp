@@ -10,21 +10,15 @@
 #include "audio/HakuiAudio.hpp"
 #include "avatar/BodyProfileController.hpp"
 #include "avatar/HakuiSkeleton.hpp"
-#include "combat/CombatSimulation.hpp"
+#include "core/GameRuntime.hpp"
 #include "games/GameTerminal.hpp"
 #include "interaction/InteractionService.hpp"
 #include "input/SdlInputBridge.hpp"
 #include "input/RideControlInterpreter.hpp"
 #include "observer/ExpertObserver.hpp"
-#include "player/PlayerMovementController.hpp"
-#include "player/RideableMovementController.hpp"
-#include "player/PlayerState.hpp"
 #include "render/DebugWorldRenderer.hpp"
-#include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
 #include "systems/LocomotionRouter.hpp"
-#include "world/WorldState.hpp"
-#include "world/BlackRoom.hpp"
 
 class HakuiApp {
 public:
@@ -96,13 +90,21 @@ private:
     hakui::input::RideControlInterpreter rideControls_{};
     hakui::input::RideControlFrame rideControlFrame_{};
     DebugWorldRenderer debugRenderer_;
-    WorldState world_;
-    hakui::BlackRoom blackRoom_;
-    hakui::combat::CombatSimulation combat_;
-    hakui::social::ChatSystem chat_;
-    PlayerState player_;
-    hakui::PlayerMovementController movement_;
-    hakui::RideableMovementController rideable_;
+
+    // L3 runtime boundary: HakuiApp owns the platform shell; GameRuntime owns
+    // authoritative deterministic game lifetime. Reference aliases preserve the
+    // existing v1.01 call sites while ownership moves out of the app class.
+    hakui::GameRuntime runtime_;
+    WorldState& world_ = runtime_.world();
+    hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
+    hakui::combat::CombatSimulation& combat_ = runtime_.combat();
+    hakui::social::ChatSystem& chat_ = runtime_.chat();
+    PlayerState& player_ = runtime_.player();
+    hakui::PlayerMovementController& movement_ = runtime_.movement();
+    hakui::RideableMovementController& rideable_ = runtime_.rideable();
+
+    // The legacy router still performs UI-facing locomotion logging through
+    // SDL. L5 will split that remaining platform concern from player ownership.
     LocomotionRouter locomotion_{player_};
     hakui::observer::RuntimeEventJournal observerJournal_{96};
 };
