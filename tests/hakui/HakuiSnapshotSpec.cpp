@@ -13,6 +13,32 @@ bool near(float left, float right, float epsilon = 0.0001f) noexcept
     return std::fabs(left - right) <= epsilon;
 }
 
+const hakui::HakuiAffordanceSnapshot* findAffordance(
+    const hakui::HakuiSnapshot& snapshot,
+    std::uint32_t id
+) noexcept
+{
+    for (const auto& affordance : snapshot.world.affordances) {
+        if (affordance.id == id) {
+            return &affordance;
+        }
+    }
+    return nullptr;
+}
+
+const hakui::HakuiSeatSnapshot* findSeat(
+    const hakui::HakuiSnapshot& snapshot,
+    std::uint32_t id
+) noexcept
+{
+    for (const auto& seat : snapshot.world.seats) {
+        if (seat.id == id) {
+            return &seat;
+        }
+    }
+    return nullptr;
+}
+
 class SnapshotTarget final : public hakui::Interactable {
 public:
     explicit SnapshotTarget(hakui::EntityId id) : id_(id) {}
@@ -77,6 +103,8 @@ int main()
     assert(initial.world.geometryPrimitiveCount == runtime.blackRoom().geometry().size());
     assert(initial.world.affordanceCount == runtime.blackRoom().affordances().size());
     assert(initial.world.seatAnchorCount == runtime.blackRoom().seatAnchors().size());
+    assert(initial.world.affordances.size() == initial.world.affordanceCount);
+    assert(initial.world.seats.size() == initial.world.seatAnchorCount);
     assert(initial.world.occupiedSeatCount == 0);
     assert(initial.player.displayName == "ETHER");
     assert(near(initial.player.money, 250.0f));
@@ -84,7 +112,28 @@ int main()
     assert(initial.interactions.liveTargetIds[0] == 9001);
     assert(initial.interactions.liveTargetIds[1] == 9002);
 
-    // L6 invariant 2: runtime truth is copied exactly at capture time.
+    // L6 invariant 2: semantic authored world truth is copied, not renderer
+    // geometry. L7 can identify usable places and resolved seats from this data.
+    const hakui::HakuiAffordanceSnapshot* initialCouch =
+        findAffordance(initial, 1002);
+    assert(initialCouch != nullptr);
+    assert(!initialCouch->label.empty());
+    assert(hakui::hasAffordance(
+        initialCouch->affordances,
+        hakui::WorldAffordance::Seat
+    ));
+
+    std::size_t couchSeats = 0;
+    for (const auto& seat : initial.world.seats) {
+        if (seat.furnitureAffordanceId == 1002) {
+            ++couchSeats;
+            assert(!seat.occupied);
+            assert(!seat.label.empty());
+        }
+    }
+    assert(couchSeats == 2);
+
+    // L6 invariant 3: runtime truth is copied exactly at capture time.
     runtime.advanceWorld(2.5f);
     runtime.player().displayName = "SNAPSHOT TEST";
     runtime.player().health = 73.0f;
@@ -114,7 +163,16 @@ int main()
     assert(seated.player.activeAffordanceId == 1002);
     assert(seated.player.activeSeatAnchorId != 0);
 
-    // L6 invariant 3: a previously captured packet is frozen truth. Later
+    const hakui::HakuiSeatSnapshot* occupiedSeat =
+        findSeat(seated, seated.player.activeSeatAnchorId);
+    assert(occupiedSeat != nullptr);
+    assert(occupiedSeat->occupied);
+    assert(occupiedSeat->furnitureAffordanceId == 1002);
+    assert(near(occupiedSeat->worldPosition.x, seated.player.x));
+    assert(near(occupiedSeat->worldPosition.y, seated.player.y));
+    assert(near(occupiedSeat->worldPosition.z, seated.player.z));
+
+    // L6 invariant 4: a previously captured packet is frozen truth. Later
     // simulation mutations cannot change it through hidden references.
     const float frozenX = seated.player.x;
     const std::uint32_t frozenSeat = seated.player.activeSeatAnchorId;
@@ -129,6 +187,7 @@ int main()
     assert(seated.player.seatOccupancy);
     assert(seated.world.occupiedSeatCount == 1);
     assert(near(seated.world.elapsedSeconds, 2.5f));
+    assert(findSeat(seated, frozenSeat)->occupied);
 
     assert(!later.player.seatOccupancy);
     assert(later.player.activeSeatAnchorId == 0);
@@ -136,6 +195,7 @@ int main()
     assert(near(later.world.elapsedSeconds, 3.5f));
     assert(later.world.simulationStep == 2);
     assert(later.world.occupiedSeatCount == 0);
+    assert(!findSeat(later, frozenSeat)->occupied);
 
     return 0;
 }
