@@ -3,7 +3,7 @@ name: HAKUI Native Windows
 on:
   push:
     branches:
-      - trinity/hakui-unification-v0.1
+      - 'trinity/**'
   pull_request:
   workflow_dispatch:
 
