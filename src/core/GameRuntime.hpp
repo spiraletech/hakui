@@ -3,7 +3,6 @@
 #include "player/PlayerMovementController.hpp"
 #include "player/RideableMovementController.hpp"
 #include "player/PlayerState.hpp"
-#include "systems/LocomotionRouter.hpp"
 #include "world/BlackRoom.hpp"
 #include "world/WorldState.hpp"
 
@@ -11,10 +10,9 @@ namespace hakui {
 
 // L3 runtime ownership boundary.
 //
-// GameRuntime owns deterministic world/player/locomotion state that used to
-// live directly on HakuiApp. SDL, rendering, audio, chat, combat and Spiral
-// orchestration intentionally remain outside this class for now; later layers
-// can migrate across this boundary without changing the platform shell.
+// GameRuntime owns deterministic world/player/movement state that used to live
+// directly on HakuiApp. Platform-bound routing, SDL, rendering, audio, chat,
+// combat and Spiral orchestration intentionally remain outside this class.
 class GameRuntime final {
 public:
     GameRuntime() = default;
@@ -38,9 +36,6 @@ public:
     RideableMovementController& rideable() noexcept { return rideable_; }
     const RideableMovementController& rideable() const noexcept { return rideable_; }
 
-    LocomotionRouter& locomotion() noexcept { return locomotion_; }
-    const LocomotionRouter& locomotion() const noexcept { return locomotion_; }
-
     // Establish a fresh deterministic player session at the authored room
     // spawn. Existing HakuiApp boot code can migrate to this call separately;
     // ownership is extracted first so L3 remains behavior-preserving.
@@ -61,7 +56,6 @@ private:
     PlayerState player_{};
     PlayerMovementController movement_{};
     RideableMovementController rideable_{};
-    LocomotionRouter locomotion_{player_};
 };
 
 } // namespace hakui
