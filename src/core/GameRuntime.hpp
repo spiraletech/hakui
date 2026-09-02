@@ -1,17 +1,17 @@
 #pragma once
 
-#include "player/PlayerMovementController.hpp"
-#include "player/RideableMovementController.hpp"
-#include "player/PlayerState.hpp"
+#include "interaction/InteractionRegistry.hpp"
+#include "player/PlayerRuntime.hpp"
 #include "world/HakuiWorldState.hpp"
 
 namespace hakui {
 
-// L3 runtime ownership boundary, strengthened by L4 canonical world authority.
+// L5 deterministic authority root.
 //
-// GameRuntime owns deterministic player/movement state plus exactly one
-// HakuiWorldState. Platform-bound routing, SDL, rendering, audio, chat, combat
-// and Spiral orchestration intentionally remain outside this class.
+// GameRuntime no longer stores player controllers/state as loose siblings.
+// World, player and interaction membership each have one explicit owner while
+// platform-bound routing, SDL, rendering, audio, chat, combat and Spiral
+// orchestration stay outside this class.
 class GameRuntime final {
 public:
     GameRuntime() = default;
@@ -23,40 +23,41 @@ public:
     HakuiWorldState& world() noexcept { return world_; }
     const HakuiWorldState& world() const noexcept { return world_; }
 
-    // Compatibility accessor for L3/native-client call sites. BlackRoom is no
-    // longer a sibling authority; it is owned by the canonical world state.
+    PlayerRuntime& playerRuntime() noexcept { return player_; }
+    const PlayerRuntime& playerRuntime() const noexcept { return player_; }
+
+    InteractionRegistry& interactionRegistry() noexcept { return interactions_; }
+    const InteractionRegistry& interactionRegistry() const noexcept { return interactions_; }
+
+    // Compatibility accessors for the existing native-client call sites.
+    // These delegate into the explicit L5 authority roots rather than exposing
+    // duplicate state.
     BlackRoom& blackRoom() noexcept { return world_.blackRoom(); }
     const BlackRoom& blackRoom() const noexcept { return world_.blackRoom(); }
 
-    PlayerState& player() noexcept { return player_; }
-    const PlayerState& player() const noexcept { return player_; }
+    PlayerState& player() noexcept { return player_.state(); }
+    const PlayerState& player() const noexcept { return player_.state(); }
 
-    PlayerMovementController& movement() noexcept { return movement_; }
-    const PlayerMovementController& movement() const noexcept { return movement_; }
+    PlayerMovementController& movement() noexcept { return player_.movement(); }
+    const PlayerMovementController& movement() const noexcept { return player_.movement(); }
 
-    RideableMovementController& rideable() noexcept { return rideable_; }
-    const RideableMovementController& rideable() const noexcept { return rideable_; }
+    RideableMovementController& rideable() noexcept { return player_.rideable(); }
+    const RideableMovementController& rideable() const noexcept { return player_.rideable(); }
 
     void advanceWorld(float deltaSeconds) noexcept
     {
         world_.advance(deltaSeconds);
     }
 
-    // Establish a fresh deterministic player session at the authored room
-    // spawn without resetting unrelated mutable world state.
+    // Reset only player/ride state against the current authored world.
     void resetPlayerToSpawn(float startingMoney = 250.0f) noexcept
     {
-        const MovementEnvironment room = world_.blackRoom().movementEnvironment();
-        player_ = PlayerState{};
-        player_.x = room.spawnX;
-        player_.y = room.spawnY;
-        player_.z = room.spawnZ;
-        player_.money = startingMoney;
-        rideable_.reset();
+        player_.resetToSpawn(world_.blackRoom().movementEnvironment(), startingMoney);
     }
 
-    // Full deterministic session reset: world clock + mutable authored-room
-    // state + player/ride state all return to their canonical defaults.
+    // Full deterministic gameplay reset. Interaction membership intentionally
+    // remains separate: live world objects keep their registered endpoints
+    // unless their owner explicitly unregisters or destroys them.
     void resetSession(float startingMoney = 250.0f) noexcept
     {
         world_.reset();
@@ -65,9 +66,8 @@ public:
 
 private:
     HakuiWorldState world_{};
-    PlayerState player_{};
-    PlayerMovementController movement_{};
-    RideableMovementController rideable_{};
+    PlayerRuntime player_{};
+    InteractionRegistry interactions_{};
 };
 
 } // namespace hakui
