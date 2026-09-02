@@ -50,21 +50,33 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/RideableMovementSpec.cpp
     )
 
+    # L2 world-stability gate. This is intentionally linked only against the
+    # deterministic gameplay layer so authored room geometry, affordances,
+    # seating, collision, and respawn contracts can be validated without SDL.
+    add_executable(hakui_world_regression_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/WorldRegressionSpec.cpp
+    )
+
     target_compile_features(hakui_gameplay_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_gameplay_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_rideable_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_rideable_spec PRIVATE hakui_gameplay)
+    target_compile_features(hakui_world_regression_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_world_regression_spec PRIVATE hakui_gameplay)
 
     if(MSVC)
         target_compile_options(hakui_gameplay_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        target_compile_options(hakui_world_regression_spec PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(hakui_gameplay_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        target_compile_options(hakui_world_regression_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
     if(BUILD_TESTING)
         add_test(NAME hakui.gameplay_movement COMMAND hakui_gameplay_spec)
         add_test(NAME hakui.rideable_movement COMMAND hakui_rideable_spec)
+        add_test(NAME hakui.world_regression COMMAND hakui_world_regression_spec)
     endif()
 endif()
