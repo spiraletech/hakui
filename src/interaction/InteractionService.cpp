@@ -16,60 +16,41 @@ std::string interactionPayload(const InteractionRequest& request)
 
 } // namespace
 
-InteractionService::InteractionService(spiral::RouterBus& bus)
-    : bus_(bus)
+InteractionService::InteractionService(
+    InteractionRegistry& registry,
+    spiral::RouterBus& bus
+)
+    : registry_(registry),
+      bus_(bus)
 {
 }
 
 bool InteractionService::registerTarget(const std::shared_ptr<Interactable>& target)
 {
-    if (!target || target->interactionId() == 0) {
-        return false;
-    }
-
-    const EntityId id = target->interactionId();
-    const auto it = targets_.find(id);
-    if (it != targets_.end()) {
-        if (!it->second.expired()) {
-            return false;
-        }
-        targets_.erase(it);
-    }
-
-    targets_[id] = target;
-    return true;
+    return registry_.registerTarget(target);
 }
 
 bool InteractionService::unregisterTarget(EntityId id)
 {
-    return targets_.erase(id) > 0;
+    return registry_.unregisterTarget(id);
 }
 
 void InteractionService::pruneExpired()
 {
-    for (auto it = targets_.begin(); it != targets_.end();) {
-        if (it->second.expired()) {
-            it = targets_.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    registry_.pruneExpired();
 }
 
 std::size_t InteractionService::targetCount()
 {
-    pruneExpired();
-    return targets_.size();
+    return registry_.targetCount();
 }
 
-std::vector<InteractionOption> InteractionService::options(EntityId actor, EntityId target)
+std::vector<InteractionOption> InteractionService::options(
+    EntityId actor,
+    EntityId target
+)
 {
-    const auto object = findTarget(target);
-    if (!object) {
-        return {};
-    }
-
-    return object->interactionOptions(actor);
+    return registry_.options(actor, target);
 }
 
 InteractionResult InteractionService::interact(const InteractionRequest& request)
@@ -81,7 +62,7 @@ InteractionResult InteractionService::interact(const InteractionRequest& request
         return {};
     }
 
-    const auto object = findTarget(request.target);
+    const auto object = registry_.resolve(request.target);
     if (!object) {
         emitError(request, "interaction.target_missing", "target is not registered");
         return {};
@@ -101,24 +82,6 @@ InteractionResult InteractionService::interact(const InteractionRequest& request
 
     emitResult(request, result);
     return result;
-}
-
-std::shared_ptr<Interactable> InteractionService::findTarget(EntityId id)
-{
-    if (id == 0) {
-        return {};
-    }
-
-    const auto it = targets_.find(id);
-    if (it == targets_.end()) {
-        return {};
-    }
-
-    auto target = it->second.lock();
-    if (!target) {
-        targets_.erase(it);
-    }
-    return target;
 }
 
 bool InteractionService::offersVerb(
