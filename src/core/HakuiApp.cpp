@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "avatar/AvatarGroundContact.hpp"
@@ -186,6 +187,7 @@ bool HakuiApp::boot()
     }
 
     initSpiralCore();
+    refreshCortexBinding();
     terminal_ = std::make_shared<hakui::games::GameTerminal>(
         7001,
         hakui::games::TerminalModel::FusionDeck
@@ -215,10 +217,14 @@ bool HakuiApp::boot()
     SDL_Log("[HAKUI] WORLD ONLINE");
     SDL_Log("[HAKUI] DATA GRUNGE // ACTIVE");
     SDL_Log("[HAKUI] SPIRAL CORE // ONLINE");
-    const hakui::SpiralPresenceView bootPresence = spiralPresence_.view();
+    const hakui::SpiralPresenceView bootPresence = spiralPresence_.view(
+        hakui::SpiralPresence::defaultNearbyRadius,
+        cortexStatus_
+    );
     SDL_Log(
-        "[HAKUI] SPIRAL PRESENCE // %s // CORTEX UNBOUND",
-        bootPresence.linked ? "HAKUI LINK READ ONLY" : "LINK OFFLINE"
+        "[HAKUI] SPIRAL PRESENCE // %s // %s",
+        bootPresence.linked ? "HAKUI LINK READ ONLY" : "LINK OFFLINE",
+        bootPresence.cortexLine.c_str()
     );
     SDL_Log("[HAKUI] avatar skeleton // %zu bones loaded", avatarSkeleton_.boneCount());
     SDL_Log(
@@ -240,7 +246,7 @@ bool HakuiApp::boot()
     SDL_Log("[HAKUI] expert observer // F12 read-only inspection bundle");
     SDL_Log("[HAKUI] combat grammar // semantic primary/secondary // guard // recover");
     SDL_Log("[HAKUI] combat foundation // unarmed playable // sword + bow extension seams dormant");
-    SDL_Log("[HAKUI] social language // ENTER chat // ENTER send // ESC cancel");
+    SDL_Log("[HAKUI] social language // ENTER chat // near Spiral node ENTER talks to cortex // ESC cancel");
     (void)chat_.postSystem("WORLD ONLINE", world_.elapsedSeconds);
     if (const char* inputPreview = SDL_getenv("HAKUI_SOCIAL_PREVIEW_INPUT");
         inputPreview && inputPreview[0] != '\0') {
@@ -1379,6 +1385,14 @@ void HakuiApp::commitChatInput()
     if (!chat_.inputActive()) {
         return;
     }
+
+    const std::string prompt = chat_.inputBuffer();
+    const hakui::SpiralPresenceView presence = spiralPresence_.view(
+        hakui::SpiralPresence::defaultNearbyRadius,
+        cortexStatus_
+    );
+    const bool routeToCortex = presence.playerInRange;
+
     const hakui::social::ChatMessage* message = chat_.commitLocal(
         1,
         static_cast<double>(world_.elapsedSeconds)
@@ -1387,15 +1401,21 @@ void HakuiApp::commitChatInput()
         SDL_StopTextInput(window_);
     }
     if (message) {
-        recordObserverEvent("social.local", "avatar chat message committed");
+        recordObserverEvent(
+            routeToCortex ? "spiral.cortex.user" : "social.local",
+            routeToCortex
+                ? "human message routed to Spiral cortex"
+                : "avatar chat message committed"
+        );
         SDL_Log(
-            "[SOCIAL] LOCAL // intent %.*s // %s",
-            static_cast<int>(hakui::social::speechIntentLabel(
-                message->speechIntent
-            ).size()),
-            hakui::social::speechIntentLabel(message->speechIntent).data(),
+            routeToCortex
+                ? "[SPIRAL CORTEX] USER // %s"
+                : "[SOCIAL] LOCAL // %s",
             message->text.c_str()
         );
+        if (routeToCortex) {
+            beginCortexRequest(prompt);
+        }
     } else {
         recordObserverEvent("social.input", "empty chat input dismissed");
     }
@@ -1412,6 +1432,133 @@ void HakuiApp::cancelChatInput()
     }
     recordObserverEvent("social.input", "chat input cancelled");
     SDL_Log("[SOCIAL] CHAT INPUT // CANCELLED");
+}
+
+
+void HakuiApp::refreshCortexBinding()
+{
+    if (cortexStatus_.busy) {
+        return;
+    }
+
+    const bool wasBound = cortexStatus_.bound;
+    const hakui::SpiralCortexReply probe = cortexClient_.probe();
+    cortexStatus_.bound = probe.connected && probe.ok;
+    cortexStatus_.localModelLoaded = probe.localModelLoaded;
+    cortexStatus_.model = probe.model;
+    cortexStatus_.detail = probe.ok ? probe.text : probe.error;
+    cortexProbeTimer_ = cortexStatus_.bound ? 5.0f : 2.0f;
+
+    if (cortexStatus_.bound != wasBound) {
+        if (cortexStatus_.bound) {
+            SDL_Log(
+                "[SPIRAL CORTEX] BOUND // Spiral Ether AI // model %s",
+                cortexStatus_.model.c_str()
+            );
+        } else {
+            SDL_Log("[SPIRAL CORTEX] OFFLINE // run SpiralHakuiCortex.exe");
+        }
+        recordObserverEvent(
+            "spiral.cortex.binding",
+            cortexStatus_.bound ? "bound" : "offline"
+        );
+    }
+}
+
+void HakuiApp::beginCortexRequest(std::string prompt)
+{
+    if (prompt.empty()) {
+        return;
+    }
+    if (cortexStatus_.busy) {
+        (void)chat_.postSystem(
+            "SPIRAL CORTEX BUSY // WAIT FOR CURRENT RESPONSE",
+            static_cast<double>(world_.elapsedSeconds),
+            hakui::social::MessageSource::SystemAI
+        );
+        return;
+    }
+
+    if (!cortexStatus_.bound) {
+        refreshCortexBinding();
+    }
+    if (!cortexStatus_.bound) {
+        (void)chat_.postSystem(
+            "SPIRAL CORTEX OFFLINE // RUN SpiralHakuiCortex.exe",
+            static_cast<double>(world_.elapsedSeconds),
+            hakui::social::MessageSource::SystemAI
+        );
+        showInputStatus("SPIRAL CORTEX OFFLINE // START BRIDGE", 4.0f);
+        return;
+    }
+
+    cortexStatus_.busy = true;
+    showInputStatus("SPIRAL CORTEX // THINKING", 8.0f);
+    const hakui::HakuiSnapshot snapshot = hakuiAdapter_.snapshot();
+    const hakui::SpiralCortexClient client = cortexClient_;
+    const std::shared_ptr<CortexMailbox> mailbox = cortexMailbox_;
+    {
+        std::lock_guard<std::mutex> lock(mailbox->mutex);
+        mailbox->reply.reset();
+    }
+
+    std::thread([
+        client,
+        snapshot,
+        prompt = std::move(prompt),
+        mailbox
+    ]() mutable {
+        hakui::SpiralCortexReply reply = client.ask(snapshot, prompt);
+        std::lock_guard<std::mutex> lock(mailbox->mutex);
+        mailbox->reply = std::move(reply);
+    }).detach();
+}
+
+void HakuiApp::pollCortex()
+{
+    std::optional<hakui::SpiralCortexReply> reply;
+    {
+        std::lock_guard<std::mutex> lock(cortexMailbox_->mutex);
+        if (cortexMailbox_->reply) {
+            reply = std::move(cortexMailbox_->reply);
+            cortexMailbox_->reply.reset();
+        }
+    }
+    if (!reply) {
+        return;
+    }
+
+    cortexStatus_.busy = false;
+    cortexStatus_.bound = reply->connected;
+    cortexStatus_.localModelLoaded = reply->localModelLoaded;
+    cortexStatus_.model = reply->model;
+    cortexStatus_.detail = reply->ok ? reply->text : reply->error;
+    cortexProbeTimer_ = cortexStatus_.bound ? 5.0f : 1.0f;
+
+    if (reply->ok) {
+        (void)chat_.postSystem(
+            reply->text,
+            static_cast<double>(world_.elapsedSeconds),
+            hakui::social::MessageSource::SystemAI
+        );
+        showInputStatus("SPIRAL CORTEX // RESPONSE RECEIVED", 3.0f);
+        SDL_Log("[SPIRAL CORTEX] RESPONSE // %s", reply->text.c_str());
+        recordObserverEvent("spiral.cortex.reply", "response received");
+    } else {
+        const std::string notice = "SPIRAL CORTEX ERROR // " + reply->error;
+        (void)chat_.postSystem(
+            notice,
+            static_cast<double>(world_.elapsedSeconds),
+            hakui::social::MessageSource::SystemAI
+        );
+        showInputStatus("SPIRAL CORTEX // ERROR", 4.0f);
+        SDL_LogError(
+            SDL_LOG_CATEGORY_APPLICATION,
+            "[SPIRAL CORTEX] %s",
+            reply->error.c_str()
+        );
+        recordObserverEvent("spiral.cortex.error", reply->error);
+    }
 }
 
 SDL_AppResult HakuiApp::handleEvent(const SDL_Event& event)
@@ -1560,7 +1707,10 @@ void HakuiApp::updateHud()
     };
     const std::string_view device =
         InputResolver::deviceName(inputFrame_.activeDevice);
-    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view(
+        hakui::SpiralPresence::defaultNearbyRadius,
+        cortexStatus_
+    );
     const auto jump = prompt(Action::Jump);
     const auto interact = prompt(Action::Interact);
     const auto cancel = prompt(Action::Cancel);
@@ -1581,7 +1731,9 @@ void HakuiApp::updateHud()
         SDL_snprintf(
             title,
             sizeof(title),
-            "HAKUI v1.01 // CHAT INPUT // %s_ // ENTER SEND // ESC CANCEL // %zu/%zu // INPUT ChatInput",
+            spiralPresenceView.playerInRange
+                ? "HAKUI v1.01 // SPIRAL INPUT // %s_ // ENTER SEND TO CORTEX // ESC CANCEL // %zu/%zu // INPUT ChatInput"
+                : "HAKUI v1.01 // CHAT INPUT // %s_ // ENTER SEND // ESC CANCEL // %zu/%zu // INPUT ChatInput",
             chat_.inputBuffer().c_str(),
             chat_.inputCodepoints(),
             chat_.tuning().maximumMessageCodepoints
@@ -1727,8 +1879,9 @@ void HakuiApp::updateHud()
             SDL_snprintf(
                 title,
                 sizeof(title),
-                "HAKUI v1.01 // SPIRAL PRESENCE // HAKUI LINK %s // CORTEX UNBOUND // WORLD %s // NEARBY %zu // INPUT %.*s",
+                "HAKUI v1.01 // SPIRAL PRESENCE // HAKUI LINK %s // %s // ENTER TALK // WORLD %s // NEARBY %zu // INPUT %.*s",
                 spiralPresenceView.linked ? "READ ONLY" : "OFFLINE",
+                spiralPresenceView.cortexLine.c_str(),
                 spiralPresenceView.worldLine.c_str(),
                 spiralPresenceView.nearbyObjectCount,
                 static_cast<int>(device.size()), device.data()
@@ -1796,7 +1949,17 @@ void HakuiApp::update(float dt)
 
     inputFrame_ = inputBridge_.sample(gamepad_, dt, cameraDragging_);
     inputStatusTimer_ = std::max(0.0f, inputStatusTimer_ - dt);
+    cortexProbeTimer_ = std::max(0.0f, cortexProbeTimer_ - dt);
     chat_.update(dt);
+    pollCortex();
+    const hakui::SpiralPresenceView cortexPresence = spiralPresence_.view(
+        hakui::SpiralPresence::defaultNearbyRadius,
+        cortexStatus_
+    );
+    if (!cortexStatus_.busy && !cortexStatus_.bound &&
+        cortexPresence.playerInRange && cortexProbeTimer_ <= 0.0f) {
+        refreshCortexBinding();
+    }
     if (socialPreviewCaptureDelay_ > 0.0f) {
         socialPreviewCaptureDelay_ -= dt;
         if (socialPreviewCaptureDelay_ <= 0.0f) {
@@ -2211,7 +2374,10 @@ bool HakuiApp::render()
         return true;
     }
 
-    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view(
+        hakui::SpiralPresence::defaultNearbyRadius,
+        cortexStatus_
+    );
     HakuiSceneState scene;
     scene.spiralPresenceVisible = true;
     scene.spiralPresenceLinked = spiralPresenceView.linked;
