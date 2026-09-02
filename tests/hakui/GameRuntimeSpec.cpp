@@ -24,6 +24,14 @@ int main()
     assert(&runtime.movement() == &runtime.movement());
     assert(&runtime.rideable() == &runtime.rideable());
 
+    // L4: GameRuntime owns exactly one canonical world authority. The legacy
+    // BlackRoom accessor must resolve into that world, never a sibling copy.
+    hakui::HakuiWorldState* const worldAddress = &runtime.world();
+    hakui::BlackRoom* const roomAddress = &runtime.world().blackRoom();
+    assert(&runtime.world() == worldAddress);
+    assert(&runtime.blackRoom() == roomAddress);
+    assert(&runtime.blackRoom() == &runtime.world().blackRoom());
+
     const hakui::MovementEnvironment room =
         runtime.blackRoom().movementEnvironment();
 
@@ -44,10 +52,23 @@ int main()
     assert(near(runtime.player().money, 99.0f));
     assert(runtime.player().locomotion == LocomotionMode::OnFoot);
 
-    // World time is owned by the runtime as well and remains independent from
-    // platform/rendering concerns.
-    runtime.world().elapsedSeconds = 12.5f;
-    assert(near(runtime.world().elapsedSeconds, 12.5f));
+    // World time advances through the canonical state and stays independent
+    // from platform/rendering concerns.
+    runtime.advanceWorld(12.5f);
+    assert(near(runtime.world().clock().seconds(), 12.5f));
+    assert(runtime.world().clock().step() == 1);
+
+    // Full session reset preserves authority addresses while restoring the
+    // deterministic world clock and player spawn defaults.
+    runtime.resetSession(333.0f);
+    assert(&runtime.world() == worldAddress);
+    assert(&runtime.blackRoom() == roomAddress);
+    assert(&runtime.player() == playerAddress);
+    assert(near(runtime.world().clock().seconds(), 0.0f));
+    assert(runtime.world().clock().step() == 0);
+    assert(near(runtime.player().x, room.spawnX));
+    assert(near(runtime.player().z, room.spawnZ));
+    assert(near(runtime.player().money, 333.0f));
 
     return 0;
 }
