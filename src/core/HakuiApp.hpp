@@ -84,11 +84,12 @@ private:
     hakui::InteractionService interactions_{spiral_.router()};
     std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
-    // L3 ownership extraction: deterministic world/player/movement state is
-    // now owned by GameRuntime. These references preserve the existing native
-    // client call sites while authority moves behind one runtime boundary.
+    // L3 extracted deterministic ownership into GameRuntime. L4 now makes one
+    // HakuiWorldState authoritative for world identity, clock and BlackRoom.
+    // Compatibility references preserve native-client call sites while the
+    // deeper ownership graph is made explicit.
     hakui::GameRuntime runtime_{};
-    WorldState& world_ = runtime_.world();
+    hakui::HakuiWorldState& world_ = runtime_.world();
     hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
     PlayerState& player_ = runtime_.player();
     hakui::PlayerMovementController& movement_ = runtime_.movement();
