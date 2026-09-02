@@ -77,23 +77,29 @@ private:
     float socialPreviewCaptureDelay_ = -1.0f;
     std::filesystem::path lastObserverBundle_;
 
-    // Spiral is the client's orchestration spine. It remains independent from
-    // SDL/rendering and from optional legacy avatar backends.
+    // Spiral is the client's orchestration spine. It observes/receives typed
+    // interaction lifecycle signals but does not own deterministic game state.
     spiral::SpiralKernel spiral_;
     spiral::RouterBus::ListenerId spiralListener_ = 0;
-    hakui::InteractionService interactions_{spiral_.router()};
-    std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
-    // L3 extracted deterministic ownership into GameRuntime. L4 now makes one
-    // HakuiWorldState authoritative for world identity, clock and BlackRoom.
-    // Compatibility references preserve native-client call sites while the
-    // deeper ownership graph is made explicit.
+    // L5 authority split. GameRuntime owns exactly one world authority, one
+    // player authority and one interaction-membership authority. These
+    // compatibility references preserve the existing native client while
+    // keeping all deterministic state rooted below GameRuntime.
     hakui::GameRuntime runtime_{};
     hakui::HakuiWorldState& world_ = runtime_.world();
     hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
     PlayerState& player_ = runtime_.player();
     hakui::PlayerMovementController& movement_ = runtime_.movement();
     hakui::RideableMovementController& rideable_ = runtime_.rideable();
+
+    // Execution + Spiral telemetry are separate from target membership. The
+    // service is wired to the registry owned by GameRuntime.
+    hakui::InteractionService interactions_{
+        runtime_.interactionRegistry(),
+        spiral_.router()
+    };
+    std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
     // LocomotionRouter still emits SDL diagnostics, so it remains in the
     // platform shell until its logging contract is made dependency-free.

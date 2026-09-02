@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 
+#include "interaction/InteractionRegistry.hpp"
 #include "interaction/InteractionService.hpp"
 #include "spiral/SpiralKernel.hpp"
 
@@ -63,10 +64,16 @@ private:
 void interaction_flows_request_exec_state_into_spiral()
 {
     spiral::SpiralKernel kernel;
-    hakui::InteractionService interactions(kernel.router());
+    hakui::InteractionRegistry registry;
+    hakui::InteractionService interactions(registry, kernel.router());
+
+    // L5: service execution/telemetry and target membership are distinct
+    // authorities wired by reference, not duplicated registries.
+    assert(&interactions.registry() == &registry);
 
     auto door = std::make_shared<DoorInteractable>(100);
     assert(interactions.registerTarget(door));
+    assert(registry.targetCount() == 1);
     assert(interactions.targetCount() == 1);
 
     const auto options = interactions.options(1, 100);
@@ -99,10 +106,11 @@ void interaction_flows_request_exec_state_into_spiral()
 void unavailable_or_missing_interactions_are_observable_errors()
 {
     spiral::SpiralKernel kernel;
-    hakui::InteractionService interactions(kernel.router());
+    hakui::InteractionRegistry registry;
+    hakui::InteractionService interactions(registry, kernel.router());
 
     auto door = std::make_shared<DoorInteractable>(100);
-    assert(interactions.registerTarget(door));
+    assert(registry.registerTarget(door));
 
     hakui::InteractionRequest denied;
     denied.actor = 1;
@@ -134,17 +142,38 @@ void unavailable_or_missing_interactions_are_observable_errors()
 void expired_world_objects_cannot_become_dangling_targets()
 {
     spiral::SpiralKernel kernel;
-    hakui::InteractionService interactions(kernel.router());
+    hakui::InteractionRegistry registry;
+    hakui::InteractionService interactions(registry, kernel.router());
 
     auto door = std::make_shared<DoorInteractable>(100);
-    assert(interactions.registerTarget(door));
-    assert(interactions.targetCount() == 1);
+    assert(registry.registerTarget(door));
+    assert(registry.targetCount() == 1);
 
     door.reset();
 
-    // Service owns only weak references and prunes dead world objects.
+    // Registry owns only weak membership and prunes dead world objects. The
+    // service observes that same authoritative membership state.
+    assert(registry.targetCount() == 0);
     assert(interactions.targetCount() == 0);
     assert(interactions.options(1, 100).empty());
+}
+
+void registry_membership_is_independent_from_service_lifetime()
+{
+    spiral::SpiralKernel kernel;
+    hakui::InteractionRegistry registry;
+    auto door = std::make_shared<DoorInteractable>(100);
+    assert(registry.registerTarget(door));
+
+    {
+        hakui::InteractionService interactions(registry, kernel.router());
+        assert(interactions.targetCount() == 1);
+    }
+
+    // Destroying the RouterBus bridge cannot silently delete gameplay target
+    // membership; GameRuntime/registry authority remains intact.
+    assert(registry.targetCount() == 1);
+    assert(registry.resolve(100) == door);
 }
 
 } // namespace
@@ -154,5 +183,6 @@ int main()
     interaction_flows_request_exec_state_into_spiral();
     unavailable_or_missing_interactions_are_observable_errors();
     expired_world_objects_cannot_become_dangling_targets();
+    registry_membership_is_independent_from_service_lifetime();
     return 0;
 }
