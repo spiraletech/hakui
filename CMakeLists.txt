@@ -27,6 +27,7 @@ include(cmake/HakuiObserver.cmake)
 include(cmake/HakuiCamera.cmake)
 include(cmake/HakuiCombat.cmake)
 include(cmake/HakuiTabletop.cmake)
+include(cmake/HakuiRuntime.cmake)
 
 # ============================================================
 # BUILD GATES
@@ -125,6 +126,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             hakui_camera
             hakui_combat
             hakui_tabletop
+            hakui_runtime
     )
 
     target_include_directories(hakui PRIVATE
