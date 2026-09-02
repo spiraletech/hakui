@@ -1,0 +1,58 @@
+name: HAKUI Couch Geometry Guard
+
+on:
+  push:
+    branches:
+      - trinity/hakui-unification-v0.1
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-void-couch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical HAKUI
+        uses: actions/checkout@v4
+        with:
+          ref: trinity/hakui-unification-v0.1
+          fetch-depth: 0
+
+      - name: Detect extended couch regression
+        id: gate
+        shell: bash
+        run: |
+          if grep -Fq '6.54f, 0.73f, 4.30f, 1.25f, 0.22f, 0.82f' src/world/BlackRoom.cpp; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore two-seat couch geometry
+        if: steps.gate.outputs.needed == 'true'
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/world/BlackRoom.cpp')
+          text = path.read_text(encoding='utf-8')
+          duplicate = '''    {WorldPrimitiveKind::Furniture, MaterialRole::PowderConcrete,
+               6.54f, 0.73f, 4.30f, 1.25f, 0.22f, 0.82f,
+               0.0f, 0.0f, 0.0f, 2, 1.40f, 0.0f, 0.0f},
+          '''
+          count = text.count(duplicate)
+          if count != 1:
+              raise RuntimeError(f'expected one extended couch block, found {count}')
+          path.write_text(text.replace(duplicate, '', 1), encoding='utf-8')
+
+      - name: Commit couch geometry repair
+        if: steps.gate.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "hakui-trinity-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/world/BlackRoom.cpp
+          git commit -m "Fix extended void couch geometry"
+          git push origin HEAD:trinity/hakui-unification-v0.1
