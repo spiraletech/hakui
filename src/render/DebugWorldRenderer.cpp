@@ -943,6 +943,49 @@ bool DebugWorldRenderer::render(
 
     }
 
+    // L8 visible Spiral presence. The physical terminal is authored in the
+    // Black Room; these overlays contain only read-only adapter-derived text.
+    if (!scene.mannequinLab && scene.spiralPresenceVisible) {
+        const Uint32 linkPalette = scene.spiralPresenceLinked
+            ? TerminalGreen
+            : Danger;
+        const Uint32 rangePalette = scene.spiralPresencePlayerInRange
+            ? Cyan
+            : Midnight;
+        drawBox(
+            {scene.spiralNodeX, scene.spiralNodeY + 2.30f, scene.spiralNodeZ - 0.20f},
+            {0.32f, 0.18f, 0.32f},
+            linkPalette
+        );
+        drawBox(
+            {scene.spiralNodeX, scene.spiralNodeY + 0.10f, scene.spiralNodeZ + 0.10f},
+            {2.70f, 0.055f, 0.12f},
+            rangePalette
+        );
+        const Mat4 presenceRoot = translation({
+            scene.spiralNodeX - 1.30f,
+            scene.spiralNodeY + 2.05f,
+            scene.spiralNodeZ + 0.36f
+        });
+        drawWorldText(scene.spiralPresenceHeadline, presenceRoot,
+                      0.014f, 0.022f, 0.010f, 38, linkPalette);
+        drawWorldText(scene.spiralPresenceLinkLine,
+                      multiply(presenceRoot, translation({0.0f, -0.24f, 0.0f})),
+                      0.012f, 0.019f, 0.010f, 40, Cyan);
+        drawWorldText(scene.spiralPresenceWorldLine,
+                      multiply(presenceRoot, translation({0.0f, -0.46f, 0.0f})),
+                      0.010f, 0.017f, 0.010f, 44, Shell);
+        drawWorldText(scene.spiralPresencePlayerLine,
+                      multiply(presenceRoot, translation({0.0f, -0.66f, 0.0f})),
+                      0.010f, 0.017f, 0.010f, 44, Shell);
+        drawWorldText(scene.spiralPresenceNearbyLine,
+                      multiply(presenceRoot, translation({0.0f, -0.86f, 0.0f})),
+                      0.010f, 0.017f, 0.010f, 44, Amber);
+        drawWorldText(scene.spiralPresenceCortexLine,
+                      multiply(presenceRoot, translation({0.0f, -1.08f, 0.0f})),
+                      0.010f, 0.017f, 0.010f, 44, Magenta);
+    }
+
     // Locomotion embodiment is presentation driven by deterministic player
     // state. These procedural entities contain no movement or trick rules.
     const bool ridingSkateboard =

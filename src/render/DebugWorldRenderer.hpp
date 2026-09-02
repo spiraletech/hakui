@@ -78,6 +78,18 @@ struct HakuiSceneState {
     hakui::social::SocialGesture socialGesture =
         hakui::social::SocialGesture::None;
     float socialGestureWeight = 0.0f;
+    bool spiralPresenceVisible = false;
+    bool spiralPresenceLinked = false;
+    bool spiralPresencePlayerInRange = false;
+    float spiralNodeX = 0.0f;
+    float spiralNodeY = 0.0f;
+    float spiralNodeZ = 0.0f;
+    std::string_view spiralPresenceHeadline{};
+    std::string_view spiralPresenceLinkLine{};
+    std::string_view spiralPresenceWorldLine{};
+    std::string_view spiralPresencePlayerLine{};
+    std::string_view spiralPresenceNearbyLine{};
+    std::string_view spiralPresenceCortexLine{};
     hakui::RideableState rideable{};
 };
 

@@ -21,6 +21,7 @@
 #include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
 #include "spiral/hakui/HakuiAdapter.hpp"
+#include "spiral/hakui/SpiralPresence.hpp"
 #include "systems/LocomotionRouter.hpp"
 
 class HakuiApp {
@@ -98,6 +99,10 @@ private:
     // bound to the authoritative runtime. It can capture/inspect HakuiSnapshot
     // truth but has no mutation, interaction-execution or Spiral-write path.
     hakui::HakuiAdapter hakuiAdapter_{runtime_};
+
+    // L8 visible embodiment of the read-only HAKUI link. Presence formats
+    // adapter truth for presentation; CORTEX remains deliberately unbound.
+    hakui::SpiralPresence spiralPresence_{hakuiAdapter_};
 
     // Execution + Spiral telemetry are separate from target membership. The
     // service is wired to the registry owned by GameRuntime.

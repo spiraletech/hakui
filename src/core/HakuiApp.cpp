@@ -215,6 +215,11 @@ bool HakuiApp::boot()
     SDL_Log("[HAKUI] WORLD ONLINE");
     SDL_Log("[HAKUI] DATA GRUNGE // ACTIVE");
     SDL_Log("[HAKUI] SPIRAL CORE // ONLINE");
+    const hakui::SpiralPresenceView bootPresence = spiralPresence_.view();
+    SDL_Log(
+        "[HAKUI] SPIRAL PRESENCE // %s // CORTEX UNBOUND",
+        bootPresence.linked ? "HAKUI LINK READ ONLY" : "LINK OFFLINE"
+    );
     SDL_Log("[HAKUI] avatar skeleton // %zu bones loaded", avatarSkeleton_.boneCount());
     SDL_Log(
         "[HAKUI] body profile // %.*s // runtime-selectable",
@@ -1555,6 +1560,7 @@ void HakuiApp::updateHud()
     };
     const std::string_view device =
         InputResolver::deviceName(inputFrame_.activeDevice);
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();
     const auto jump = prompt(Action::Jump);
     const auto interact = prompt(Action::Interact);
     const auto cancel = prompt(Action::Cancel);
@@ -1717,6 +1723,19 @@ void HakuiApp::updateHud()
             static_cast<int>(device.size()), device.data()
         );
     } else {
+        if (spiralPresenceView.playerInRange) {
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                "HAKUI v1.01 // SPIRAL PRESENCE // HAKUI LINK %s // CORTEX UNBOUND // WORLD %s // NEARBY %zu // INPUT %.*s",
+                spiralPresenceView.linked ? "READ ONLY" : "OFFLINE",
+                spiralPresenceView.worldLine.c_str(),
+                spiralPresenceView.nearbyObjectCount,
+                static_cast<int>(device.size()), device.data()
+            );
+            SDL_SetWindowTitle(window_, title);
+            return;
+        }
         const hakui::RoomInteractionFocus focus = blackRoom_.nearestInteraction(player_);
         if (focus) {
             SDL_snprintf(
@@ -2192,7 +2211,20 @@ bool HakuiApp::render()
         return true;
     }
 
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();
     HakuiSceneState scene;
+    scene.spiralPresenceVisible = true;
+    scene.spiralPresenceLinked = spiralPresenceView.linked;
+    scene.spiralPresencePlayerInRange = spiralPresenceView.playerInRange;
+    scene.spiralNodeX = spiralPresenceView.nodeX;
+    scene.spiralNodeY = spiralPresenceView.nodeY;
+    scene.spiralNodeZ = spiralPresenceView.nodeZ;
+    scene.spiralPresenceHeadline = spiralPresenceView.headline;
+    scene.spiralPresenceLinkLine = spiralPresenceView.linkLine;
+    scene.spiralPresenceWorldLine = spiralPresenceView.worldLine;
+    scene.spiralPresencePlayerLine = spiralPresenceView.playerLine;
+    scene.spiralPresenceNearbyLine = spiralPresenceView.nearbyLine;
+    scene.spiralPresenceCortexLine = spiralPresenceView.cortexLine;
     scene.playerBodyProfile = bodyProfile_.activeId();
     scene.paused = paused_;
     scene.rideable = rideable_.state();

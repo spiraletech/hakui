@@ -160,6 +160,19 @@ const auto kSpecimenGeometry = std::to_array<WorldPrimitive>({
     {WorldPrimitiveKind::Monument, MaterialRole::CrtCyan,
      6.70f, 5.20f, -3.90f, 0.24f, 1.50f, 0.24f},
 
+    // L8 SPIRAL PRESENCE NODE: physical read-only observation surface.
+    // The node is authored world truth; conversational cortex binding is L9.
+    {WorldPrimitiveKind::Terminal, MaterialRole::IndustrialDark,
+     -6.55f, 1.18f, -5.55f, 3.40f, 2.36f, 0.54f},
+    {WorldPrimitiveKind::Terminal, MaterialRole::VoidBlack,
+     -6.55f, 1.55f, -5.24f, 2.96f, 1.48f, 0.08f},
+    {WorldPrimitiveKind::Signage, MaterialRole::TerminalGreen,
+     -6.55f, 1.55f, -5.18f, 2.78f, 1.30f, 0.03f},
+    {WorldPrimitiveKind::Signage, MaterialRole::CrtCyan,
+     -8.08f, 1.18f, -5.54f, 0.10f, 2.20f, 0.10f},
+    {WorldPrimitiveKind::Signage, MaterialRole::SignalMagenta,
+     -5.02f, 1.18f, -5.54f, 0.10f, 2.20f, 0.10f},
+
     // Distant markers make negative space tangible without filling it.
     {WorldPrimitiveKind::VoidMarker, MaterialRole::CrtCyan,
      -11.5f, -2.0f, -8.8f, 0.16f, 1.20f, 0.16f,
@@ -212,6 +225,11 @@ constexpr auto kSpecimenAffordances = std::to_array<WorldAffordanceVolume>({
     {1202, "SPARRING SPECTATOR MARK",
      affordanceMask(WorldAffordance::SpectatorZone),
      2.0f, 9.2f, -0.20f, 3.00f, -1.60f, -0.40f},
+    {1401, "SPIRAL PRESENCE NODE",
+     affordanceMask(WorldAffordance::Terminal),
+     -8.30f, -4.80f, -0.50f, 3.20f, -6.40f, -4.35f,
+     {-6.55f, 0.0f, -4.92f, 3.14159265358979323846f},
+     {-6.55f, 0.0f, -4.10f, 3.14159265358979323846f}},
     {1301, "SPAWN RECOVERY",
      affordanceMask(WorldAffordance::RespawnVolume),
      -1.5f, 1.5f, -0.20f, 3.00f, 4.3f, 6.3f},
