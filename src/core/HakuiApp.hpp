@@ -20,6 +20,7 @@
 #include "render/DebugWorldRenderer.hpp"
 #include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
+#include "systems/LocomotionRouter.hpp"
 
 class HakuiApp {
 public:
@@ -83,16 +84,19 @@ private:
     hakui::InteractionService interactions_{spiral_.router()};
     std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
-    // L3 ownership extraction: deterministic world/player/locomotion state is
-    // now owned by GameRuntime. These references intentionally preserve the
-    // existing HakuiApp call sites while moving authority behind one boundary.
+    // L3 ownership extraction: deterministic world/player/movement state is
+    // now owned by GameRuntime. These references preserve the existing native
+    // client call sites while authority moves behind one runtime boundary.
     hakui::GameRuntime runtime_{};
     WorldState& world_ = runtime_.world();
     hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
     PlayerState& player_ = runtime_.player();
     hakui::PlayerMovementController& movement_ = runtime_.movement();
     hakui::RideableMovementController& rideable_ = runtime_.rideable();
-    LocomotionRouter& locomotion_ = runtime_.locomotion();
+
+    // LocomotionRouter still emits SDL diagnostics, so it remains in the
+    // platform shell until its logging contract is made dependency-free.
+    LocomotionRouter locomotion_{player_};
 
     HakuiSkeleton avatarSkeleton_;
     hakui::avatar::BodyProfileController bodyProfile_{};
