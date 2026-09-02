@@ -120,6 +120,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             hakui_avatar_rig
             hakui_interaction
             hakui_gameplay
+            hakui_adapter
             hakui_input
             hakui_social
             hakui_observer
