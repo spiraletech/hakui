@@ -1,8 +1,9 @@
 # PROJECT HAKUI :: VISIBLE SPIRAL PRESENCE
 #
 # Presentation-facing semantic presence over the read-only HakuiAdapter. This
-# layer may format observation truth, but must remain independent from SDL,
-# renderer implementation details, audio, model backends, and world mutation.
+# layer may format observation truth and L9 cortex binding state, but must remain
+# independent from SDL, renderer implementation details, audio, model backends,
+# and world mutation.
 
 include(${CMAKE_CURRENT_LIST_DIR}/DependencyFirewall.cmake)
 
@@ -26,7 +27,7 @@ target_include_directories(hakui_presence
 )
 
 target_compile_features(hakui_presence PUBLIC cxx_std_20)
-target_link_libraries(hakui_presence PUBLIC hakui_adapter)
+target_link_libraries(hakui_presence PUBLIC hakui_adapter hakui_cortex)
 
 if(MSVC)
     target_compile_options(hakui_presence PRIVATE /W4 /permissive-)

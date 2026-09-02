@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -21,6 +23,7 @@
 #include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
 #include "spiral/hakui/HakuiAdapter.hpp"
+#include "spiral/hakui/SpiralCortexClient.hpp"
 #include "spiral/hakui/SpiralPresence.hpp"
 #include "systems/LocomotionRouter.hpp"
 
@@ -32,6 +35,11 @@ public:
     void shutdown();
 
 private:
+    struct CortexMailbox {
+        std::mutex mutex;
+        std::optional<hakui::SpiralCortexReply> reply;
+    };
+
     bool initPlatform();
     bool initGPU();
     void initSpiralCore();
@@ -49,6 +57,9 @@ private:
     void beginChatInput();
     void commitChatInput();
     void cancelChatInput();
+    void refreshCortexBinding();
+    void beginCortexRequest(std::string prompt);
+    void pollCortex();
     void openGamepad(SDL_JoystickID instanceId);
     void updateHud();
     void update(float dt);
@@ -100,8 +111,18 @@ private:
     // truth but has no mutation, interaction-execution or Spiral-write path.
     hakui::HakuiAdapter hakuiAdapter_{runtime_};
 
-    // L8 visible embodiment of the read-only HAKUI link. Presence formats
-    // adapter truth for presentation; CORTEX remains deliberately unbound.
+    // L9 cortex transport is process-isolated and loopback-only. The client
+    // sends frozen L6 snapshots to the real Spiral Ether AI HostKind::Hakui
+    // runtime and receives text only. A detached worker owns no HAKUI refs;
+    // replies return through a shared mailbox on the main thread.
+    hakui::SpiralCortexClient cortexClient_{};
+    hakui::SpiralCortexStatus cortexStatus_{};
+    std::shared_ptr<CortexMailbox> cortexMailbox_ =
+        std::make_shared<CortexMailbox>();
+    float cortexProbeTimer_ = 0.0f;
+
+    // L8 visible embodiment of the read-only HAKUI link. L9 feeds it only a
+    // cortex status value; presence itself still owns no model or action path.
     hakui::SpiralPresence spiralPresence_{hakuiAdapter_};
 
     // Execution + Spiral telemetry are separate from target membership. The

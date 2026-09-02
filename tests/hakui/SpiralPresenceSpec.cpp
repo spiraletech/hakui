@@ -40,7 +40,7 @@ int main()
     hakui::GameRuntime runtime;
     runtime.resetSession(500.0f);
     runtime.advanceWorld(3.0f);
-    runtime.player().displayName = "L8 TEST";
+    runtime.player().displayName = "L9 TEST";
     runtime.player().health = 91.0f;
     runtime.player().stamina = 74.0f;
 
@@ -50,8 +50,6 @@ int main()
     const hakui::HakuiSnapshot before = adapter.snapshot();
     const hakui::HakuiAffordanceSnapshot* node = findNode(before.world);
 
-    // L8 invariant 1: the visible presence is backed by an authored semantic
-    // terminal node that is visible to the same L6/L7 truth path as Spiral.
     assert(node != nullptr);
     assert(hakui::hasAffordance(
         node->affordances,
@@ -62,18 +60,19 @@ int main()
     assert(initial.linked);
     assert(initial.readOnly);
     assert(!initial.cortexBound);
+    assert(!initial.cortexBusy);
+    assert(!initial.cortexLocalModelLoaded);
     assert(initial.snapshotVersion == hakui::HakuiSnapshot::schemaVersion);
     assert(near(initial.nodeX, node->primaryAnchor.x));
     assert(near(initial.nodeY, node->primaryAnchor.y));
     assert(near(initial.nodeZ, node->primaryAnchor.z));
     assert(initial.headline == "SPIRAL // HAKUI PRESENCE");
     assert(initial.linkLine == "HAKUI LINK // READ ONLY");
-    assert(initial.cortexLine.find("UNBOUND") != std::string::npos);
+    assert(initial.cortexLine.find("OFFLINE") != std::string::npos);
     assert(initial.worldLine.find(before.world.worldId) != std::string::npos);
-    assert(initial.playerLine.find("L8 TEST") != std::string::npos);
+    assert(initial.playerLine.find("L9 TEST") != std::string::npos);
 
-    // L8 invariant 2: proximity is observation only. Moving the authoritative
-    // player near the node changes the next presence view, not vice versa.
+    // Proximity is still observation only.
     runtime.player().x = node->primaryAnchor.x;
     runtime.player().y = node->primaryAnchor.y;
     runtime.player().z = node->primaryAnchor.z + 1.0f;
@@ -83,10 +82,30 @@ int main()
     assert(nearby.playerDistance <= hakui::SpiralPresence::nodeInteractionRadius);
     assert(nearby.nearbyObjectCount > 0);
 
-    // L8 invariant 3: repeated presence refreshes do not mutate HAKUI truth.
+    // L9 can display a bound real cortex state without granting it authority.
+    hakui::SpiralCortexStatus bound;
+    bound.bound = true;
+    bound.localModelLoaded = true;
+    bound.runtimeName = "Spiral Ether AI";
+    bound.model = "test.gguf";
+    const hakui::SpiralPresenceView boundView = presence.view(6.0f, bound);
+    assert(boundView.readOnly);
+    assert(boundView.cortexBound);
+    assert(boundView.cortexLocalModelLoaded);
+    assert(boundView.cortexLine.find("BOUND") != std::string::npos);
+    assert(boundView.cortexLine.find("LOCAL MODEL") != std::string::npos);
+
+    bound.busy = true;
+    const hakui::SpiralPresenceView thinking = presence.view(6.0f, bound);
+    assert(thinking.cortexBound);
+    assert(thinking.cortexBusy);
+    assert(thinking.cortexLine.find("THINKING") != std::string::npos);
+
+    // Repeated presence refreshes, including cortex status changes, do not
+    // mutate authoritative HAKUI truth.
     const hakui::HakuiSnapshot observationStart = adapter.snapshot();
     for (int index = 0; index < 8; ++index) {
-        (void)presence.view(6.0f);
+        (void)presence.view(6.0f, bound);
     }
     const hakui::HakuiSnapshot observationEnd = adapter.snapshot();
 
@@ -100,12 +119,11 @@ int main()
     assert(observationStart.world.occupiedSeatCount == observationEnd.world.occupiedSeatCount);
     assert(observationStart.interactions.liveTargetIds == observationEnd.interactions.liveTargetIds);
 
-    // L8 invariant 4: presence never claims a cortex before L9.
     runtime.player().health = 17.0f;
     runtime.advanceWorld(0.5f);
-    const hakui::SpiralPresenceView later = presence.view();
+    const hakui::SpiralPresenceView later = presence.view(6.0f, bound);
     assert(later.linked);
-    assert(!later.cortexBound);
+    assert(later.cortexBound);
     assert(later.playerLine.find("17.0") != std::string::npos);
     assert(later.worldLine.find("STEP 2") != std::string::npos);
 
