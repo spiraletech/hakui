@@ -3,6 +3,13 @@ from pathlib import Path
 PATH = Path("src/core/HakuiApp.cpp")
 text = PATH.read_text(encoding="utf-8")
 
+# GitHub Actions may see this branch again after its own integration commit.
+# Treat an already-integrated source as success instead of trying to reapply a
+# strict textual migration.
+if "void HakuiApp::refreshCortexBinding()" in text:
+    print("L9 native cortex integration already applied")
+    raise SystemExit(0)
+
 
 def replace_once(old: str, new: str, label: str) -> None:
     global text
@@ -152,12 +159,14 @@ void HakuiApp::refreshCortexBinding()
     cortexProbeTimer_ = cortexStatus_.bound ? 5.0f : 2.0f;
 
     if (cortexStatus_.bound != wasBound) {
-        SDL_Log(
-            cortexStatus_.bound
-                ? "[SPIRAL CORTEX] BOUND // Spiral Ether AI // model %s"
-                : "[SPIRAL CORTEX] OFFLINE // run SpiralHakuiCortex.exe",
-            cortexStatus_.bound ? cortexStatus_.model.c_str() : ""
-        );
+        if (cortexStatus_.bound) {
+            SDL_Log(
+                "[SPIRAL CORTEX] BOUND // Spiral Ether AI // model %s",
+                cortexStatus_.model.c_str()
+            );
+        } else {
+            SDL_Log("[SPIRAL CORTEX] OFFLINE // run SpiralHakuiCortex.exe");
+        }
         recordObserverEvent(
             "spiral.cortex.binding",
             cortexStatus_.bound ? "bound" : "offline"
@@ -263,12 +272,22 @@ void HakuiApp::pollCortex()
 '''
 replace_once(insert_after_cancel, cortex_methods, "cortex methods")
 
+# The presence view expression occurs in both updateHud() and render(); anchor
+# this replacement to the surrounding HUD device/prompt setup so the migration
+# cannot accidentally edit the renderer site first.
 replace_once(
-    '    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();\n',
-    '''    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view(
+    '''    const std::string_view device =
+        InputResolver::deviceName(inputFrame_.activeDevice);
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view();
+    const auto jump = prompt(Action::Jump);
+''',
+    '''    const std::string_view device =
+        InputResolver::deviceName(inputFrame_.activeDevice);
+    const hakui::SpiralPresenceView spiralPresenceView = spiralPresence_.view(
         hakui::SpiralPresence::defaultNearbyRadius,
         cortexStatus_
     );
+    const auto jump = prompt(Action::Jump);
 ''',
     "HUD presence view",
 )
