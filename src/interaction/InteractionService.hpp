@@ -2,21 +2,24 @@
 
 #include <cstddef>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
-#include "interaction/Interactable.hpp"
+#include "interaction/InteractionRegistry.hpp"
 #include "spiral/bus/RouterBus.hpp"
 
 namespace hakui {
 
-// Non-owning interaction registry + execution bridge.
-// World/entity ownership remains elsewhere; weak_ptr registration means an
-// expired object cannot become a dangling interaction target.
+// L5 interaction execution/telemetry bridge.
+//
+// Target membership is authoritative in InteractionRegistry, which is owned by
+// GameRuntime. InteractionService only resolves/executes requests and reports
+// their typed lifecycle over RouterBus into Spiral Core.
 class InteractionService {
 public:
-    explicit InteractionService(spiral::RouterBus& bus);
+    InteractionService(InteractionRegistry& registry, spiral::RouterBus& bus);
 
+    // Compatibility surface for existing callers. Membership mutations are
+    // delegated to the externally owned registry rather than stored here.
     bool registerTarget(const std::shared_ptr<Interactable>& target);
     bool unregisterTarget(EntityId id);
     void pruneExpired();
@@ -25,8 +28,10 @@ public:
     std::vector<InteractionOption> options(EntityId actor, EntityId target);
     InteractionResult interact(const InteractionRequest& request);
 
+    InteractionRegistry& registry() noexcept { return registry_; }
+    const InteractionRegistry& registry() const noexcept { return registry_; }
+
 private:
-    std::shared_ptr<Interactable> findTarget(EntityId id);
     bool offersVerb(
         const std::vector<InteractionOption>& options,
         InteractionVerb verb
@@ -37,8 +42,8 @@ private:
     void emitError(const InteractionRequest& request, const char* topic, const char* message);
 
 private:
+    InteractionRegistry& registry_;
     spiral::RouterBus& bus_;
-    std::unordered_map<EntityId, std::weak_ptr<Interactable>> targets_;
 };
 
 } // namespace hakui
