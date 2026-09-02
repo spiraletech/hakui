@@ -11,6 +11,7 @@ file(GLOB HAKUI_GAMEPLAY_FIREWALL_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/../src/world/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/world/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/core/GameRuntime.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../src/core/HakuiSnapshot.hpp"
 )
 
 hakui_enforce_first_party_firewall(
@@ -23,6 +24,7 @@ add_library(hakui_gameplay STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/RideableMovementController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/world/BlackRoom.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/core/GameRuntime.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/core/HakuiSnapshot.hpp
 )
 
 target_include_directories(hakui_gameplay
@@ -64,6 +66,10 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/GameRuntimeSpec.cpp
     )
 
+    add_executable(hakui_snapshot_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/HakuiSnapshotSpec.cpp
+    )
+
     target_compile_features(hakui_gameplay_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_gameplay_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_rideable_spec PRIVATE cxx_std_20)
@@ -74,6 +80,8 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
     target_link_libraries(hakui_world_state_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_game_runtime_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_game_runtime_spec PRIVATE hakui_gameplay)
+    target_compile_features(hakui_snapshot_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_snapshot_spec PRIVATE hakui_gameplay)
 
     if(MSVC)
         target_compile_options(hakui_gameplay_spec PRIVATE /W4 /permissive- /UNDEBUG)
@@ -81,12 +89,14 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_world_regression_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_world_state_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_game_runtime_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        target_compile_options(hakui_snapshot_spec PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(hakui_gameplay_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_world_regression_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_world_state_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_game_runtime_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        target_compile_options(hakui_snapshot_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
     if(BUILD_TESTING)
@@ -95,5 +105,6 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         add_test(NAME hakui.world_regression COMMAND hakui_world_regression_spec)
         add_test(NAME hakui.world_state COMMAND hakui_world_state_spec)
         add_test(NAME hakui.game_runtime COMMAND hakui_game_runtime_spec)
+        add_test(NAME hakui.snapshot COMMAND hakui_snapshot_spec)
     endif()
 endif()
