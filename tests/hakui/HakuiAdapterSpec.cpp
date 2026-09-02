@@ -48,7 +48,9 @@ private:
 
 int main()
 {
-    static_assert(!std::is_constructible_v<hakui::HakuiAdapter, hakui::GameRuntime&> == false);
+    static_assert(std::is_constructible_v<hakui::HakuiAdapter, const hakui::GameRuntime&>);
+    static_assert(!std::is_constructible_v<hakui::HakuiAdapter, hakui::GameRuntime&&>);
+    static_assert(!std::is_constructible_v<hakui::HakuiAdapter, const hakui::GameRuntime&&>);
 
     hakui::GameRuntime runtime;
     runtime.resetSession(375.0f);
@@ -75,8 +77,6 @@ int main()
     assert(!adapter.supports("hakui.inspect_weather"));
     assert(!adapter.supports("hakui.set_player_position"));
 
-    // Capture the authoritative state before any adapter observation. Every
-    // inspection below must leave this truth untouched.
     const hakui::HakuiSnapshot before = adapter.snapshot();
 
     const hakui::HakuiWorldSnapshot world = adapter.inspectWorld();
@@ -97,16 +97,14 @@ int main()
     assert(near(time.elapsedSeconds, 4.25f));
     assert(time.simulationStep == 1);
 
-    const hakui::HakuiInteractionSnapshot interactions =
-        adapter.inspectInteractions();
+    const hakui::HakuiInteractionSnapshot interactions = adapter.inspectInteractions();
     assert(interactions.liveTargetIds.size() == 2);
     assert(interactions.liveTargetIds[0] == 7301);
     assert(interactions.liveTargetIds[1] == 7302);
 
     // L7 invariant 2: nearby inspection derives semantic proximity from the
     // copied affordance contract, not renderer primitives.
-    const hakui::WorldAffordanceVolume* couch =
-        runtime.blackRoom().affordanceById(1002);
+    const hakui::WorldAffordanceVolume* couch = runtime.blackRoom().affordanceById(1002);
     assert(couch != nullptr);
     runtime.player().x = couch->primaryAnchor.x;
     runtime.player().y = couch->primaryAnchor.y;
@@ -136,8 +134,7 @@ int main()
 
     const auto nearbyResult = adapter.execute("hakui.inspect_nearby", 2.0f);
     assert(nearbyResult);
-    const auto* nearbyPayload =
-        std::get_if<hakui::HakuiNearbyInspection>(&nearbyResult.payload);
+    const auto* nearbyPayload = std::get_if<hakui::HakuiNearbyInspection>(&nearbyResult.payload);
     assert(nearbyPayload != nullptr);
     assert(near(nearbyPayload->radius, 2.0f));
 
@@ -154,9 +151,7 @@ int main()
     assert(weather.status == hakui::HakuiAdapterStatus::UnsupportedCommand);
     assert(std::holds_alternative<std::monostate>(weather.payload));
 
-    // L7 invariant 4: observation cannot mutate simulation authority. Account
-    // for the intentional player reposition performed by this test before the
-    // final observation-only block, then prove adapter calls themselves are inert.
+    // L7 invariant 4: observation cannot mutate simulation authority.
     const hakui::HakuiSnapshot observationStart = adapter.snapshot();
     (void)adapter.inspectWorld();
     (void)adapter.inspectPlayer();
