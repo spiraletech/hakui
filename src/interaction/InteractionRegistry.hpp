@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <unordered_map>
@@ -66,6 +67,34 @@ public:
     {
         pruneExpired();
         return targets_.size();
+    }
+
+    // L6 read-only observation surface. Snapshot capture must not mutate the
+    // authoritative registry merely to inspect it, so expired weak entries are
+    // filtered rather than pruned and IDs are sorted for deterministic output.
+    std::vector<EntityId> liveTargetIds() const
+    {
+        std::vector<EntityId> ids;
+        ids.reserve(targets_.size());
+        for (const auto& [id, target] : targets_) {
+            if (!target.expired()) {
+                ids.push_back(id);
+            }
+        }
+        std::sort(ids.begin(), ids.end());
+        return ids;
+    }
+
+    std::size_t liveTargetCount() const noexcept
+    {
+        std::size_t count = 0;
+        for (const auto& [id, target] : targets_) {
+            (void)id;
+            if (!target.expired()) {
+                ++count;
+            }
+        }
+        return count;
     }
 
     std::shared_ptr<Interactable> resolve(EntityId id)
