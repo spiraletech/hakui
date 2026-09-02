@@ -29,15 +29,29 @@ std::string fixed1(float value)
 
 } // namespace
 
-SpiralPresenceView SpiralPresence::view(float nearbyRadius) const
+SpiralPresenceView SpiralPresence::view(
+    float nearbyRadius,
+    const SpiralCortexStatus& cortex
+) const
 {
     SpiralPresenceView view;
     view.readOnly = true;
-    view.cortexBound = false;
+    view.cortexBound = cortex.bound;
+    view.cortexBusy = cortex.busy;
+    view.cortexLocalModelLoaded = cortex.localModelLoaded;
     view.interactionRadius = nodeInteractionRadius;
     view.headline = "SPIRAL // HAKUI PRESENCE";
     view.linkLine = "HAKUI LINK // READ ONLY";
-    view.cortexLine = "CORTEX // UNBOUND // L9";
+
+    if (cortex.busy) {
+        view.cortexLine = "CORTEX // THINKING // SPIRAL ETHER AI";
+    } else if (cortex.bound && cortex.localModelLoaded) {
+        view.cortexLine = "CORTEX // BOUND // LOCAL MODEL";
+    } else if (cortex.bound) {
+        view.cortexLine = "CORTEX // BOUND // SPIRAL ETHER AI";
+    } else {
+        view.cortexLine = "CORTEX // OFFLINE // START BRIDGE";
+    }
 
     const HakuiSnapshot snapshot = adapter_.snapshot();
     view.snapshotVersion = snapshot.version;
