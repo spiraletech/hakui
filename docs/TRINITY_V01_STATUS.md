@@ -15,6 +15,25 @@
 - Windows native build/test/package workflow produces a runnable package
 - manual body-profile smoke test passed visually; the extended Void Couch regression was isolated to duplicated seat geometry and repaired without changing avatar/runtime logic
 
+## L2 — World regression stabilization
+
+L2 is implemented and guarded by `hakui.world_regression`.
+
+The deterministic regression contract now verifies:
+
+- every authored world primitive is finite, positive-sized, and has a valid repeat count
+- every expanded repeated primitive produces sane bounds
+- world affordance IDs remain unique and their volumes remain valid
+- the player spawn remains on valid floor and inside the recovery affordance
+- the Void Couch remains inside its intended visual envelope instead of growing an accidental right-side tail
+- the Void Couch expands to exactly six furniture instances: base, back, two arms, and two seat cushions
+- the couch movement collider remains bounded to the intended couch footprint
+- the couch remains a two-seat semantic affordance
+- both seat anchors resolve inside the same couch affordance
+- sit/leave state is reversible, releases seat reservations, and permits another player to sit afterward
+
+The L2 contract is compiled and executed as part of the dependency-free gameplay CI on Linux and Windows.
+
 ## Validation gate before merge
 
 The branch remains a draft until the packaged native client is manually exercised with both body profiles through the same acceptance loop:
@@ -23,4 +42,4 @@ The branch remains a draft until the packaged native client is manually exercise
 
 ## Next engineering layer
 
-After the unified body/world build is accepted, add a read-only `HakuiAdapter` so Spiral can inspect authoritative HAKUI state without becoming a gameplay dependency. XENON remains the separate Music Trinity.
+L3 extracts `GameRuntime` so `HakuiApp` becomes orchestration rather than the owner of growing gameplay state. After the runtime/world-state layers are established, HAKUI can expose a read-only `HakuiAdapter` to Spiral Ether AI without making AI a gameplay dependency. XENON remains the separate Music Trinity.
