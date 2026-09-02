@@ -11,20 +11,15 @@
 #include "avatar/BodyProfileController.hpp"
 #include "avatar/HakuiSkeleton.hpp"
 #include "combat/CombatSimulation.hpp"
+#include "core/GameRuntime.hpp"
 #include "games/GameTerminal.hpp"
 #include "interaction/InteractionService.hpp"
 #include "input/SdlInputBridge.hpp"
 #include "input/RideControlInterpreter.hpp"
 #include "observer/ExpertObserver.hpp"
-#include "player/PlayerMovementController.hpp"
-#include "player/RideableMovementController.hpp"
-#include "player/PlayerState.hpp"
 #include "render/DebugWorldRenderer.hpp"
 #include "social/ChatSystem.hpp"
 #include "spiral/SpiralKernel.hpp"
-#include "systems/LocomotionRouter.hpp"
-#include "world/WorldState.hpp"
-#include "world/BlackRoom.hpp"
 
 class HakuiApp {
 public:
@@ -88,6 +83,17 @@ private:
     hakui::InteractionService interactions_{spiral_.router()};
     std::shared_ptr<hakui::games::GameTerminal> terminal_;
 
+    // L3 ownership extraction: deterministic world/player/locomotion state is
+    // now owned by GameRuntime. These references intentionally preserve the
+    // existing HakuiApp call sites while moving authority behind one boundary.
+    hakui::GameRuntime runtime_{};
+    WorldState& world_ = runtime_.world();
+    hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
+    PlayerState& player_ = runtime_.player();
+    hakui::PlayerMovementController& movement_ = runtime_.movement();
+    hakui::RideableMovementController& rideable_ = runtime_.rideable();
+    LocomotionRouter& locomotion_ = runtime_.locomotion();
+
     HakuiSkeleton avatarSkeleton_;
     hakui::avatar::BodyProfileController bodyProfile_{};
     HakuiAudio audio_;
@@ -96,13 +102,7 @@ private:
     hakui::input::RideControlInterpreter rideControls_{};
     hakui::input::RideControlFrame rideControlFrame_{};
     DebugWorldRenderer debugRenderer_;
-    WorldState world_;
-    hakui::BlackRoom blackRoom_;
     hakui::combat::CombatSimulation combat_;
     hakui::social::ChatSystem chat_;
-    PlayerState player_;
-    hakui::PlayerMovementController movement_;
-    hakui::RideableMovementController rideable_;
-    LocomotionRouter locomotion_{player_};
     hakui::observer::RuntimeEventJournal observerJournal_{96};
 };
