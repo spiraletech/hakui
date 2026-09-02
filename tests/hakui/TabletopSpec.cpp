@@ -9,6 +9,7 @@
 #include "games/CardDeck.hpp"
 #include "games/Dice.hpp"
 #include "games/GameTerminal.hpp"
+#include "interaction/InteractionRegistry.hpp"
 #include "interaction/InteractionService.hpp"
 #include "spiral/SpiralKernel.hpp"
 
@@ -98,13 +99,15 @@ void blackjack_scores_aces_and_uses_virtual_credits()
 void terminals_route_use_play_and_dice_through_interactions()
 {
     spiral::SpiralKernel kernel;
-    hakui::InteractionService interactions(kernel.router());
+    hakui::InteractionRegistry registry;
+    hakui::InteractionService interactions(registry, kernel.router());
     auto terminal = std::make_shared<hakui::games::GameTerminal>(
         7001,
         hakui::games::TerminalModel::FusionDeck,
         7001
     );
     assert(interactions.registerTarget(terminal));
+    assert(registry.targetCount() == 1);
     assert(terminal->nextContextAction() ==
            hakui::games::TerminalContextAction::PowerOn);
 
