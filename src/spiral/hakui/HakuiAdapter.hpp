@@ -86,6 +86,11 @@ public:
     {
     }
 
+    // The adapter stores a reference; binding it to a temporary runtime would
+    // create a dangling observation source after the full expression.
+    HakuiAdapter(GameRuntime&&) = delete;
+    HakuiAdapter(const GameRuntime&&) = delete;
+
     [[nodiscard]] const GameRuntime& runtime() const noexcept { return runtime_; }
     [[nodiscard]] HakuiSnapshot snapshot() const;
 
