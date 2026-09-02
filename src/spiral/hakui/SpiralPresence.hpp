@@ -5,6 +5,7 @@
 #include <string>
 
 #include "spiral/hakui/HakuiAdapter.hpp"
+#include "spiral/hakui/SpiralCortexClient.hpp"
 
 namespace hakui {
 
@@ -12,6 +13,8 @@ struct SpiralPresenceView {
     bool linked = false;
     bool readOnly = true;
     bool cortexBound = false;
+    bool cortexBusy = false;
+    bool cortexLocalModelLoaded = false;
     bool playerInRange = false;
 
     std::uint32_t snapshotVersion = HakuiSnapshot::schemaVersion;
@@ -30,12 +33,11 @@ struct SpiralPresenceView {
     std::string cortexLine;
 };
 
-// L8 visible, read-only embodiment of the HAKUI observation link.
+// L8/L9 visible embodiment of the HAKUI observation link.
 //
-// SpiralPresence owns no game state and accepts only the L7 read-only adapter.
-// It formats semantic truth for presentation and exposes a stable authored node
-// identity in the Black Room. L9 may bind a conversational cortex behind this
-// presence, but L8 deliberately keeps cortexBound=false and has no action path.
+// SpiralPresence still owns no game state. L9 allows it to display the status
+// of a separate Spiral Ether AI cortex process, but the presence receives only
+// a status value: it has no transport, model, tool, action, or mutation API.
 class SpiralPresence final {
 public:
     static constexpr std::uint32_t nodeAffordanceId = 1401;
@@ -52,7 +54,8 @@ public:
 
     [[nodiscard]] const HakuiAdapter& adapter() const noexcept { return adapter_; }
     [[nodiscard]] SpiralPresenceView view(
-        float nearbyRadius = defaultNearbyRadius
+        float nearbyRadius = defaultNearbyRadius,
+        const SpiralCortexStatus& cortex = {}
     ) const;
 
 private:
