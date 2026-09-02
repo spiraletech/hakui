@@ -1,0 +1,38 @@
+name: HAKUI L9 Cortex Binding
+
+on:
+  push:
+    branches:
+      - trinity/hakui-l9-cortex-binding
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-native-cortex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout L9 branch
+        uses: actions/checkout@v4
+        with:
+          ref: trinity/hakui-l9-cortex-binding
+          fetch-depth: 0
+
+      - name: Apply deterministic L9 native integration
+        run: python tools/apply_l9_native_cortex.py
+
+      - name: Validate patch whitespace
+        run: git diff --check
+
+      - name: Commit integrated native client
+        shell: bash
+        run: |
+          if git diff --quiet -- src/core/HakuiApp.cpp; then
+            echo "L9 native integration already present; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/core/HakuiApp.cpp
+          git commit -m "L9 — integrate Spiral cortex into native HAKUI"
+          git push origin HEAD:trinity/hakui-l9-cortex-binding
