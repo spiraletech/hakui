@@ -1566,7 +1566,8 @@ void HakuiApp::pollCortex()
 
     if (reply->ok) {
         const hakui::intent::ProposalBatch proposals =
-            hakui::intent::IntentProposalParser::parse(reply->text);
+            hakui::intent::IntentProposalParser::parse(reply->text, nextProposalId_);
+        nextProposalId_ += proposals.proposals.size();
         for (const hakui::intent::IntentProposal& proposal : proposals.proposals) {
             const std::string detail = "inert proposal=" +
                 std::string(hakui::intent::intentVerbLabel(proposal.verb)) +
@@ -1576,6 +1577,16 @@ void HakuiApp::pollCortex()
                 world_.clock().step(), world_.elapsedSeconds,
                 hakui::witness::WitnessKind::Decision,
                 "intent.proposal", detail);
+            if (proposal.verb == hakui::intent::IntentVerb::LookAt &&
+                proposal.actorId == hakui::NpcManager::saelisId &&
+                proposal.targetId == 1) {
+                const std::uint64_t step = world_.clock().step();
+                const hakui::NpcExecutionApproval approval{
+                    proposal.id, proposal.actorId, proposal.targetId,
+                    hakui::actionCapability(
+                        hakui::HakuiActionCapability::NpcAttention), step};
+                (void)npcActionExecutor_.execute(runtime_, proposal, approval);
+            }
         }
         (void)chat_.postSystem(
             reply->text,
