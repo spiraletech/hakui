@@ -35,8 +35,10 @@ int main()
     hakui::NpcState* saelis = runtime.npcs().find(hakui::NpcManager::saelisId);
     assert(saelis != nullptr);
     assert(saelis->displayName == "SAELIS");
+    assert(saelis->bodyProfile == hakui::avatar::BodyProfileId::Female);
     assert(saelis->activity == hakui::NpcActivity::Walking);
     assert(saelis->routine == hakui::NpcRoutinePhase::WalkToCouch);
+    assert(near(saelis->movementBlend, 0.0f));
     assert(!saelis->seatOccupancy);
 
     const float spawnX = saelis->x;
@@ -67,6 +69,8 @@ int main()
     }
     assert(reachedCouch);
     assert(saelis->routine == hakui::NpcRoutinePhase::CouchRest);
+    runtime.advanceWorld(1.0f);
+    assert(saelis->movementBlend < 0.01f);
     assert(saelis->seatOccupancy);
     assert(saelis->activeAffordanceId == 1002);
     assert(saelis->activeSeatAnchorId != 0);
@@ -87,6 +91,7 @@ int main()
     const hakui::HakuiNpcSnapshot* seatedSaelis =
         findNpc(seatedSnapshot, hakui::NpcManager::saelisId);
     assert(seatedSaelis != nullptr);
+    assert(seatedSaelis->bodyProfile == hakui::avatar::BodyProfileId::Female);
     assert(seatedSaelis->seatOccupancy);
     assert(seatedSaelis->activeSeatAnchorId == npcSeat);
     assert(seatedSnapshot.world.occupiedSeatCount == 1);

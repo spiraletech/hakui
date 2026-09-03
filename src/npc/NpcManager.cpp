@@ -77,6 +77,36 @@ const NpcState* NpcManager::find(std::uint32_t id) const noexcept
     return nullptr;
 }
 
+bool NpcManager::requestObservePlayer(
+    std::uint32_t id,
+    const PlayerState& player
+) noexcept
+{
+    NpcState* npc = find(id);
+    if (!npc || npc->activity == NpcActivity::Seated) {
+        return false;
+    }
+    npc->activity = NpcActivity::ObservingPlayer;
+    npc->mood = NpcMood::Curious;
+    npc->activitySeconds = 0.0f;
+    npc->playerReactionCooldown = kPlayerNoticeCooldown;
+    npc->velocityX = 0.0f;
+    npc->velocityZ = 0.0f;
+    facePoint(*npc, player.x, player.z);
+    return true;
+}
+
+bool NpcManager::requestResumeRoutine(std::uint32_t id) noexcept
+{
+    NpcState* npc = find(id);
+    if (!npc || npc->activity == NpcActivity::Seated) {
+        return false;
+    }
+    npc->activitySeconds = 0.0f;
+    resumeRoutineActivity(*npc);
+    return true;
+}
+
 NpcState NpcManager::makeSaelis() noexcept
 {
     NpcState npc;
@@ -193,6 +223,26 @@ void NpcManager::updateNeeds(NpcState& npc, float deltaSeconds) noexcept
     npc.needs.fun = clampNeed(
         npc.needs.fun + (curious ? 0.35f : -0.018f) * deltaSeconds
     );
+}
+
+void NpcManager::updateLocomotionPose(
+    NpcState& npc,
+    float deltaSeconds
+) noexcept
+{
+    const float planarSpeed = std::sqrt(
+        npc.velocityX * npc.velocityX + npc.velocityZ * npc.velocityZ
+    );
+    const bool walking = npc.activity == NpcActivity::Walking &&
+        planarSpeed > 0.0001f;
+    const float targetMovementBlend = walking ? 0.62f : 0.0f;
+    const float blendResponse = 1.0f - std::exp(-12.0f * deltaSeconds);
+    npc.movementBlend +=
+        (targetMovementBlend - npc.movementBlend) * blendResponse;
+    npc.idlePhase += 1.8f * deltaSeconds;
+    if (walking) {
+        npc.gaitPhase += 7.2f * deltaSeconds;
+    }
 }
 
 bool NpcManager::reserveCouchSeat(BlackRoom& room, NpcState& npc) noexcept
@@ -317,6 +367,7 @@ void NpcManager::tickNpc(
             npc.routine = NpcRoutinePhase::WalkSouthBypass;
             setTarget(npc, 5.20f, 0.0f, -2.35f);
         }
+        updateLocomotionPose(npc, deltaSeconds);
         return;
     }
 
@@ -331,6 +382,7 @@ void NpcManager::tickNpc(
             npc.activitySeconds = 0.0f;
             resumeRoutineActivity(npc);
         }
+        updateLocomotionPose(npc, deltaSeconds);
         return;
     }
 
@@ -344,6 +396,7 @@ void NpcManager::tickNpc(
         npc.velocityX = 0.0f;
         npc.velocityZ = 0.0f;
         facePoint(npc, player.x, player.z);
+        updateLocomotionPose(npc, deltaSeconds);
         return;
     }
 
@@ -460,6 +513,8 @@ void NpcManager::tickNpc(
             }
             break;
     }
+
+    updateLocomotionPose(npc, deltaSeconds);
 }
 
 } // namespace hakui

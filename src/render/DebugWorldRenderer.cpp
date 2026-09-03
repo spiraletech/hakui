@@ -2322,9 +2322,10 @@ bool DebugWorldRenderer::render(
         }
     }
 
-    // L10 NPC RESIDENTS // deterministic presentation
-    // Simulation owns the transforms/activities. The debug renderer only draws
-    // a lightweight resident shell from the read-only frame span.
+    // L11 NPC EMBODIMENT // canonical female mannequin + shared locomotion
+    // Simulation owns transforms and animation channels. Saelis is rendered
+    // from the approved female BodyProfile on the same procedural mannequin
+    // proportions and walk/seated contact rules as the player base model.
     for (const hakui::NpcState& npc : scene.npcs) {
         const bool seated = npc.activity == hakui::NpcActivity::Seated;
         const bool curious =
@@ -2332,8 +2333,28 @@ bool DebugWorldRenderer::render(
             npc.activity == hakui::NpcActivity::ObservingPlayer ||
             npc.activity == hakui::NpcActivity::ObservingSpiral;
 
+        const hakui::avatar::BodyProfile& npcBody =
+            hakui::avatar::bodyProfile(npc.bodyProfile);
+        const float npcGait = std::sin(npc.gaitPhase);
+        const float npcCounterGait = std::sin(npc.gaitPhase + kPi);
+        const float npcStride = 0.72f * npc.movementBlend;
+        const float npcArmStride = 0.82f * npc.movementBlend;
+        const float npcIdleBreath = 0.012f * std::sin(npc.idlePhase);
+        const float npcBodyBob = seated
+            ? 0.0f
+            : 0.045f * std::abs(npcGait) * npc.movementBlend;
+        const float npcBodySway = seated
+            ? 0.0f
+            : 0.035f * npcGait * npc.movementBlend;
+        const float npcRootLift = seated
+            ? hakui::avatarGroundContactProfile(
+                  hakui::EmbodimentProfileId::Seated
+              ).visualRootAbovePlayerBase
+            : hakui::avatarGroundContactProfile(
+                  hakui::EmbodimentProfileId::OnFoot
+              ).visualRootAbovePlayerBase;
         const Mat4 npcRoot = multiply(
-            translation({npc.x, npc.y, npc.z}),
+            translation({npc.x, npc.y + npcRootLift + npcBodyBob, npc.z}),
             rotationY(npc.yaw)
         );
 
@@ -2346,26 +2367,198 @@ bool DebugWorldRenderer::render(
             ), palette);
         };
 
-        const Uint32 bodyPalette = curious ? Cyan : Magenta;
-        const Uint32 accentPalette = seated ? Amber : Cyan;
-        const float pelvisY = seated ? 0.82f : 1.00f;
-        const float torsoY = seated ? 1.38f : 1.72f;
-        const float headY = seated ? 2.12f : 2.60f;
-        const float legY = seated ? 0.42f : 0.70f;
-        const float legHeight = seated ? 0.78f : 1.40f;
+        const auto npcBodyVec = [](const hakui::avatar::Vec3f& value) {
+            return Vec3{value.x, value.y, value.z};
+        };
+        auto npcSegment = [&](const Vec3& from,
+                              const Vec3& to,
+                              float width,
+                              Uint32 palette) {
+            const Vec3 delta{to.x - from.x, to.y - from.y, to.z - from.z};
+            const float length = std::sqrt(
+                delta.x * delta.x + delta.y * delta.y + delta.z * delta.z
+            );
+            if (length <= 0.0001f) return;
+            const Vec3 up{delta.x / length, delta.y / length, delta.z / length};
+            const Vec3 reference = std::fabs(up.z) < 0.90f
+                ? Vec3{0.0f, 0.0f, 1.0f}
+                : Vec3{1.0f, 0.0f, 0.0f};
+            Vec3 right{
+                reference.y * up.z - reference.z * up.y,
+                reference.z * up.x - reference.x * up.z,
+                reference.x * up.y - reference.y * up.x
+            };
+            const float rightLength = std::sqrt(
+                right.x * right.x + right.y * right.y + right.z * right.z
+            );
+            right = {right.x / rightLength, right.y / rightLength,
+                     right.z / rightLength};
+            const Vec3 forward{
+                up.y * right.z - up.z * right.y,
+                up.z * right.x - up.x * right.z,
+                up.x * right.y - up.y * right.x
+            };
+            Mat4 orientation = identity();
+            orientation.m[0] = right.x;
+            orientation.m[1] = right.y;
+            orientation.m[2] = right.z;
+            orientation.m[4] = up.x;
+            orientation.m[5] = up.y;
+            orientation.m[6] = up.z;
+            orientation.m[8] = forward.x;
+            orientation.m[9] = forward.y;
+            orientation.m[10] = forward.z;
+            drawModel(
+                multiply(
+                    npcRoot,
+                    multiply(
+                        translation({
+                            (from.x + to.x) * 0.5f,
+                            (from.y + to.y) * 0.5f,
+                            (from.z + to.z) * 0.5f
+                        }),
+                        multiply(orientation, scale({width, length, width}))
+                    )
+                ),
+                palette
+            );
+        };
+        auto npcHingedLimb = [&](const Vec3& joint,
+                                 float angle,
+                                 const Vec3& offset,
+                                 const Vec3& dimensions,
+                                 Uint32 palette) {
+            drawModel(
+                multiply(
+                    npcRoot,
+                    multiply(
+                        translation(joint),
+                        multiply(
+                            rotationX(angle),
+                            multiply(translation(offset), scale(dimensions))
+                        )
+                    )
+                ),
+                palette
+            );
+        };
 
-        npcBox({-0.19f, legY, 0.0f}, {0.25f, legHeight, 0.30f}, Midnight);
-        npcBox({ 0.19f, legY, 0.0f}, {0.25f, legHeight, 0.30f}, Midnight);
-        npcBox({0.0f, pelvisY, 0.0f}, {0.62f, 0.34f, 0.38f}, bodyPalette);
-        npcBox({0.0f, torsoY, 0.0f}, {0.78f, 0.86f, 0.42f}, bodyPalette);
-        npcBox({-0.50f, torsoY, 0.0f}, {0.18f, 0.88f, 0.20f}, Shell);
-        npcBox({ 0.50f, torsoY, 0.0f}, {0.18f, 0.88f, 0.20f}, Shell);
-        npcBox({0.0f, headY - 0.34f, 0.0f}, {0.18f, 0.20f, 0.18f}, accentPalette);
-        npcBox({0.0f, headY, 0.0f}, {0.48f, 0.54f, 0.46f}, Shell);
+        if (seated) {
+            // Exact player-base seated targets. Hips bend toward the canonical
+            // couch contact points instead of shortening vertical NPC legs.
+            for (float side : {-1.0f, 1.0f}) {
+                const Vec3 hip{side * 0.23f, 1.17f, 0.0f};
+                const Vec3 foot{side * 0.34f, 0.34f, 0.58f};
+                const Vec3 knee{
+                    (hip.x + foot.x) * 0.5f + side * 0.045f,
+                    (hip.y + foot.y) * 0.5f + 0.066f,
+                    (hip.z + foot.z) * 0.5f + 0.227f
+                };
+                npcSegment(hip, knee, npcBody.thighRadius, Midnight);
+                npcSegment(knee, foot, npcBody.calfRadius, Midnight);
+                npcBox(
+                    {foot.x, foot.y + 0.06f, foot.z + 0.08f},
+                    npcBodyVec(npcBody.footSize),
+                    Cyan
+                );
+            }
+        } else {
+            const auto drawWalkLeg = [&](float side, float angle) {
+                const Vec3 hip{side * 0.23f, 1.17f, 0.0f};
+                const float kneeAngle = std::max(0.0f, -angle) * 0.58f;
+                npcHingedLimb(
+                    hip, angle, {0.0f, -0.38f, 0.0f},
+                    {npcBody.thighRadius, 0.76f, npcBody.thighRadius}, Midnight
+                );
+                const Mat4 upper = multiply(
+                    npcRoot,
+                    multiply(translation(hip), rotationX(angle))
+                );
+                const Mat4 lower = multiply(
+                    upper,
+                    multiply(translation({0.0f, -0.76f, 0.0f}),
+                             rotationX(kneeAngle))
+                );
+                drawModel(
+                    multiply(
+                        lower,
+                        multiply(translation({0.0f, -0.37f, 0.0f}),
+                                 scale({npcBody.calfRadius, 0.74f,
+                                        npcBody.calfRadius}))
+                    ),
+                    Midnight
+                );
+                drawModel(
+                    multiply(
+                        lower,
+                        multiply(translation({0.0f, -0.76f, 0.14f}),
+                                 scale(npcBodyVec(npcBody.footSize)))
+                    ),
+                    Cyan
+                );
+            };
+            drawWalkLeg(-1.0f, npcGait * npcStride);
+            drawWalkLeg(1.0f, npcCounterGait * npcStride);
+        }
 
-        // Thin cyan/magenta datum above the resident keeps the first NPC easy to
-        // locate without pretending L10 already has final nameplate/UI systems.
-        npcBox({0.0f, headY + 0.43f, 0.0f}, {0.72f, 0.045f, 0.045f}, accentPalette);
+        npcBox({0.0f, 1.20f, 0.0f}, npcBodyVec(npcBody.pelvisSize), Midnight);
+        npcBox({0.0f, 1.32f, 0.0f}, npcBodyVec(npcBody.waistBridgeSize), Midnight);
+
+        const Uint32 torsoPalette = curious ? Magenta : Shell;
+        const Mat4 npcTorso = multiply(
+            npcRoot,
+            multiply(
+                translation({0.0f, 1.72f + npcIdleBreath, 0.0f}),
+                multiply(
+                    rotationZ(npcBodySway),
+                    scale(npcBodyVec(npcBody.torsoFrame))
+                )
+            )
+        );
+        drawModel(
+            multiply(npcTorso,
+                     multiply(translation({0.0f, 0.18f, 0.0f}),
+                              scale({npcBody.ribcageWidthScale, 0.58f,
+                                     npcBody.ribcageDepthScale}))),
+            torsoPalette
+        );
+        drawModel(
+            multiply(npcTorso,
+                     multiply(translation({0.0f, -0.28f, 0.0f}),
+                              scale({npcBody.waistWidthScale, 0.38f,
+                                     npcBody.waistDepthScale}))),
+            torsoPalette
+        );
+
+        const Vec3 clavicle{0.0f, 2.12f, 0.0f};
+        const Vec3 leftShoulder{-npcBody.shoulderHalfWidth,
+                                npcBody.shoulderHeight, 0.0f};
+        const Vec3 rightShoulder{npcBody.shoulderHalfWidth,
+                                 npcBody.shoulderHeight, 0.0f};
+        npcSegment(clavicle, leftShoulder, npcBody.clavicleRadius, Shell);
+        npcSegment(clavicle, rightShoulder, npcBody.clavicleRadius, Shell);
+        npcHingedLimb(
+            leftShoulder,
+            (seated ? -0.62f : 0.0f) + npcCounterGait * npcArmStride,
+            {0.0f, -0.50f, 0.0f},
+            {npcBody.upperArmRadius, 1.00f, npcBody.upperArmRadius},
+            Shell
+        );
+        npcHingedLimb(
+            rightShoulder,
+            (seated ? -0.62f : 0.0f) + npcGait * npcArmStride,
+            {0.0f, -0.50f, 0.0f},
+            {npcBody.upperArmRadius, 1.00f, npcBody.upperArmRadius},
+            Shell
+        );
+        npcBox({0.0f, 2.28f + npcIdleBreath, 0.0f},
+               npcBodyVec(npcBody.neckSize), Cyan);
+        npcBox({0.0f, 2.60f + npcIdleBreath, 0.0f},
+               npcBodyVec(npcBody.headSize), Shell);
+
+        // Thin datum remains a temporary resident locator/nameplate anchor.
+        npcBox({0.0f, 3.03f + npcIdleBreath, 0.0f},
+               {0.72f, 0.045f, 0.045f}, seated ? Amber : Cyan);
     }
 
     if (scene.sparDummyVisible) {

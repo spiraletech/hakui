@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "avatar/BodyProfile.hpp"
+
 namespace hakui {
 
 enum class NpcActivity : std::uint8_t {
@@ -44,6 +46,7 @@ struct NpcNeeds {
 struct NpcState {
     std::uint32_t id = 0;
     std::string displayName;
+    avatar::BodyProfileId bodyProfile = avatar::BodyProfileId::Female;
 
     float x = 0.0f;
     float y = 0.0f;
@@ -52,6 +55,14 @@ struct NpcState {
 
     float velocityX = 0.0f;
     float velocityZ = 0.0f;
+
+    // Shared procedural-avatar locomotion channels. These have the same
+    // meaning and timing contract as PlayerState's presentation channels so a
+    // resident can drive the canonical mannequin rather than a second NPC-only
+    // block body.
+    float movementBlend = 0.0f;
+    float gaitPhase = 0.0f;
+    float idlePhase = 0.0f;
 
     float homeX = 0.0f;
     float homeY = 0.0f;
