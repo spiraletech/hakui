@@ -12,6 +12,8 @@ file(GLOB HAKUI_GAMEPLAY_FIREWALL_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/../src/npc/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/action/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/action/*.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../src/navigation/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../src/navigation/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/witness/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/witness/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/world/*.hpp"
@@ -27,6 +29,7 @@ hakui_enforce_first_party_firewall(
 
 add_library(hakui_gameplay STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../src/action/HakuiActionGate.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/navigation/HakuiNavigation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/PlayerMovementController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/RideableMovementController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/npc/NpcManager.cpp
@@ -87,6 +90,10 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/HakuiActionGateSpec.cpp
     )
 
+    add_executable(hakui_navigation_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/HakuiNavigationSpec.cpp
+    )
+
     target_compile_features(hakui_gameplay_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_gameplay_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_rideable_spec PRIVATE cxx_std_20)
@@ -103,6 +110,8 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
     target_link_libraries(hakui_npc_simulation_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_action_gate_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_action_gate_spec PRIVATE hakui_gameplay)
+    target_compile_features(hakui_navigation_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_navigation_spec PRIVATE hakui_gameplay)
 
     if(MSVC)
         target_compile_options(hakui_gameplay_spec PRIVATE /W4 /permissive- /UNDEBUG)
@@ -113,6 +122,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_snapshot_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_npc_simulation_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_action_gate_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        target_compile_options(hakui_navigation_spec PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(hakui_gameplay_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
@@ -122,6 +132,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_snapshot_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_npc_simulation_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_action_gate_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        target_compile_options(hakui_navigation_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
     if(BUILD_TESTING)
@@ -133,5 +144,6 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         add_test(NAME hakui.snapshot COMMAND hakui_snapshot_spec)
         add_test(NAME hakui.npc_simulation COMMAND hakui_npc_simulation_spec)
         add_test(NAME hakui.action_gate COMMAND hakui_action_gate_spec)
+        add_test(NAME hakui.navigation COMMAND hakui_navigation_spec)
     endif()
 endif()

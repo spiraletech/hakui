@@ -4,10 +4,10 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L14**. A narrow NPC executor can translate a host-
-approved Saelis `LookAt(player)` proposal into L11's permissioned attention
-action. All other L13 proposal verbs remain inert until their owning physical
-systems arrive.
+Current vertical layer: **L15**. Saelis can execute a host-approved
+`WalkTo(player)` proposal through deterministic, obstacle-aware Black Room
+navigation. Natural chat command **“Saelis, come here”** routes her around
+furniture, stops her at a social distance, and turns her toward the player.
 
 ## Current Trinity unification
 
@@ -89,7 +89,8 @@ XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
+See `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC routing,
+`docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
 `docs/L13_INTENT_PROPOSALS.md` for the inert intent contract,
 `docs/L12_WITNESS.md` for self-observation, and
 `docs/L11_ACTION_GATE.md` for the permission and NPC embodiment boundary.

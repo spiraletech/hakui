@@ -82,8 +82,15 @@ std::optional<IntentProposal> IntentProposalParser::parsePlayerCommand(
     const bool asksLook = normalized.find("look at me") != std::string::npos ||
         normalized.find("face me") != std::string::npos ||
         normalized.find("look over here") != std::string::npos;
-    if (!namesSaelis || !asksLook || proposalId == 0) return std::nullopt;
-    return IntentProposal{proposalId, IntentVerb::LookAt, 2001, 1,
+    const bool asksCome = normalized.find("come here") != std::string::npos ||
+        normalized.find("come to me") != std::string::npos ||
+        normalized.find("walk to me") != std::string::npos ||
+        normalized.find("walk over here") != std::string::npos;
+    if (!namesSaelis || (!asksLook && !asksCome) || proposalId == 0)
+        return std::nullopt;
+    return IntentProposal{proposalId,
+                          asksCome ? IntentVerb::WalkTo : IntentVerb::LookAt,
+                          2001, 1,
                           "player", std::string(text)};
 }
 

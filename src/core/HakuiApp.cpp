@@ -1450,20 +1450,30 @@ void HakuiApp::commitChatInput()
         } else if (naturalProposal) {
             ++nextProposalId_;
             const std::uint64_t step = world_.clock().step();
+            const bool walkTo = naturalProposal->verb ==
+                hakui::intent::IntentVerb::WalkTo;
             const hakui::NpcExecutionApproval approval{
                 naturalProposal->id, naturalProposal->actorId,
                 naturalProposal->targetId,
-                hakui::actionCapability(hakui::HakuiActionCapability::NpcAttention),
+                hakui::actionCapability(walkTo
+                    ? hakui::HakuiActionCapability::NpcNavigation
+                    : hakui::HakuiActionCapability::NpcAttention),
                 step, hakui::HakuiActionSource::LocalSystem};
             const hakui::NpcExecutionResult result =
                 npcActionExecutor_.execute(runtime_, *naturalProposal, approval);
             if (result.executed()) {
-                showInputStatus("SAELIS // LOOKING AT YOU", 3.0f);
-                recordObserverEvent("intent.player.executed", "Saelis look-at-player");
-                SDL_Log("[SAELIS] PLAYER INTENT // LOOK AT ME // EXECUTED");
+                showInputStatus(
+                    walkTo ? "SAELIS // COMING TO YOU"
+                           : "SAELIS // LOOKING AT YOU", 3.0f);
+                recordObserverEvent("intent.player.executed",
+                    walkTo ? "Saelis walk-to-player" : "Saelis look-at-player");
+                SDL_Log(walkTo
+                    ? "[SAELIS] PLAYER INTENT // COME HERE // EXECUTED"
+                    : "[SAELIS] PLAYER INTENT // LOOK AT ME // EXECUTED");
             } else {
-                showInputStatus("SAELIS // CANNOT LOOK RIGHT NOW", 3.0f);
-                recordObserverEvent("intent.player.denied", "Saelis look-at-player");
+                showInputStatus("SAELIS // CANNOT DO THAT RIGHT NOW", 3.0f);
+                recordObserverEvent("intent.player.denied",
+                    walkTo ? "Saelis walk-to-player" : "Saelis look-at-player");
             }
         }
     } else {
@@ -1598,14 +1608,18 @@ void HakuiApp::pollCortex()
                 world_.clock().step(), world_.elapsedSeconds,
                 hakui::witness::WitnessKind::Decision,
                 "intent.proposal", detail);
-            if (proposal.verb == hakui::intent::IntentVerb::LookAt &&
+            if ((proposal.verb == hakui::intent::IntentVerb::LookAt ||
+                 proposal.verb == hakui::intent::IntentVerb::WalkTo) &&
                 proposal.actorId == hakui::NpcManager::saelisId &&
                 proposal.targetId == 1) {
+                const bool walkTo = proposal.verb ==
+                    hakui::intent::IntentVerb::WalkTo;
                 const std::uint64_t step = world_.clock().step();
                 const hakui::NpcExecutionApproval approval{
                     proposal.id, proposal.actorId, proposal.targetId,
-                    hakui::actionCapability(
-                    hakui::HakuiActionCapability::NpcAttention), step,
+                    hakui::actionCapability(walkTo
+                        ? hakui::HakuiActionCapability::NpcNavigation
+                        : hakui::HakuiActionCapability::NpcAttention), step,
                     hakui::HakuiActionSource::Cortex};
                 (void)npcActionExecutor_.execute(runtime_, proposal, approval);
             }

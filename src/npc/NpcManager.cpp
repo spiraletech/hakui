@@ -1,4 +1,5 @@
 #include "npc/NpcManager.hpp"
+#include "navigation/HakuiNavigation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,7 @@ constexpr float kPi = 3.14159265358979323846f;
 constexpr float kSaelisWalkSpeed = 1.15f;
 constexpr float kArrivalRadius = 0.08f;
 constexpr float kPlayerNoticeRadius = 1.65f;
+constexpr float kCommandStopRadius = 0.90f;
 constexpr float kPlayerNoticeSeconds = 1.25f;
 constexpr float kPlayerNoticeCooldown = 3.0f;
 constexpr float kCouchRestSeconds = 6.0f;
@@ -92,6 +94,9 @@ bool NpcManager::requestObservePlayer(
     npc->playerReactionCooldown = kPlayerNoticeCooldown;
     npc->velocityX = 0.0f;
     npc->velocityZ = 0.0f;
+    npc->navigationCommandActive = false;
+    npc->navigationWaypointCount = 0;
+    npc->navigationWaypointIndex = 0;
     facePoint(*npc, player.x, player.z);
     return true;
 }
@@ -102,8 +107,43 @@ bool NpcManager::requestResumeRoutine(std::uint32_t id) noexcept
     if (!npc || npc->activity == NpcActivity::Seated) {
         return false;
     }
+    npc->navigationCommandActive = false;
+    npc->navigationWaypointCount = 0;
+    npc->navigationWaypointIndex = 0;
     npc->activitySeconds = 0.0f;
     resumeRoutineActivity(*npc);
+    return true;
+}
+
+bool NpcManager::requestWalkToPlayer(
+    std::uint32_t id,
+    const PlayerState& player,
+    const BlackRoom& room
+)
+{
+    NpcState* npc = find(id);
+    if (!npc || npc->activity == NpcActivity::Seated) return false;
+    const float fromPlayerX = npc->x - player.x;
+    const float fromPlayerZ = npc->z - player.z;
+    const float distance = std::sqrt(
+        fromPlayerX * fromPlayerX + fromPlayerZ * fromPlayerZ);
+    if (distance <= kCommandStopRadius)
+        return requestObservePlayer(id, player);
+    const navigation::NavigationPoint destination{
+        player.x + fromPlayerX / distance * kCommandStopRadius,
+        player.z + fromPlayerZ / distance * kCommandStopRadius};
+    const navigation::NavigationPath path = navigation::HakuiNavigation{}.plan(
+        room.movementEnvironment(), {npc->x, npc->z}, destination);
+    if (!path.complete || path.count == 0) return false;
+    npc->navigationWaypointCount = path.count;
+    npc->navigationWaypointIndex = 0;
+    for (std::size_t index = 0; index < path.count; ++index)
+        npc->navigationWaypoints[index] = {path.waypoints[index].x,
+                                           path.waypoints[index].z};
+    npc->navigationCommandActive = true;
+    npc->activity = NpcActivity::Walking;
+    npc->mood = NpcMood::Curious;
+    npc->activitySeconds = 0.0f;
     return true;
 }
 
@@ -343,6 +383,28 @@ void NpcManager::tickNpc(
         npc.playerReactionCooldown - deltaSeconds
     );
     updateNeeds(npc, deltaSeconds);
+
+    if (npc.navigationCommandActive) {
+        const NpcNavigationPoint& waypoint =
+            npc.navigationWaypoints[npc.navigationWaypointIndex];
+        setTarget(npc, waypoint.x, 0.0f, waypoint.z);
+        npc.activity = NpcActivity::Walking;
+        npc.mood = NpcMood::Curious;
+        if (moveTowardTarget(npc, deltaSeconds)) {
+            ++npc.navigationWaypointIndex;
+            if (npc.navigationWaypointIndex >= npc.navigationWaypointCount) {
+                npc.navigationCommandActive = false;
+                npc.navigationWaypointCount = 0;
+                npc.navigationWaypointIndex = 0;
+                npc.activity = NpcActivity::ObservingPlayer;
+                npc.activitySeconds = 0.0f;
+                npc.playerReactionCooldown = kPlayerNoticeCooldown;
+                facePoint(npc, player.x, player.z);
+            }
+        }
+        updateLocomotionPose(npc, deltaSeconds);
+        return;
+    }
 
     if (npc.activity == NpcActivity::Seated) {
         npc.activitySeconds += deltaSeconds;

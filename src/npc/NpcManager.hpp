@@ -45,6 +45,11 @@ public:
     // physical state (for example, interrupting an occupied couch seat).
     bool requestObservePlayer(std::uint32_t id, const PlayerState& player) noexcept;
     bool requestResumeRoutine(std::uint32_t id) noexcept;
+    bool requestWalkToPlayer(
+        std::uint32_t id,
+        const PlayerState& player,
+        const BlackRoom& room
+    );
 
     // Reset resident state to authored spawn/routine defaults. Any seat still
     // owned by a resident is released first so player/NPC furniture truth stays
