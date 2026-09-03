@@ -1565,6 +1565,18 @@ void HakuiApp::pollCortex()
     cortexProbeTimer_ = cortexStatus_.bound ? 5.0f : 1.0f;
 
     if (reply->ok) {
+        const hakui::intent::ProposalBatch proposals =
+            hakui::intent::IntentProposalParser::parse(reply->text);
+        for (const hakui::intent::IntentProposal& proposal : proposals.proposals) {
+            const std::string detail = "inert proposal=" +
+                std::string(hakui::intent::intentVerbLabel(proposal.verb)) +
+                " actor=" + std::to_string(proposal.actorId) +
+                " target=" + std::to_string(proposal.targetId);
+            runtime_.witness().inferred(
+                world_.clock().step(), world_.elapsedSeconds,
+                hakui::witness::WitnessKind::Decision,
+                "intent.proposal", detail);
+        }
         (void)chat_.postSystem(
             reply->text,
             static_cast<double>(world_.elapsedSeconds),
