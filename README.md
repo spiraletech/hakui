@@ -4,11 +4,10 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L12**. `HakuiWitness` keeps a bounded deterministic
-account of session inputs, routing, observations, decisions, mutations, results
-and limitations. Records explicitly distinguish observed, inferred and unknown
-claims, and F12 exports an immutable `WitnessSnapshot.json` without granting the
-observer or cognition any gameplay authority.
+Current vertical layer: **L13**. Cortex dialogue may contain bounded typed
+`LookAt`, `WalkTo`, `Sit`, `Talk`, or `Inspect` proposals. They are inert data:
+L13 records them through L12 WITNESS but cannot execute gameplay or bypass the
+L11 action gate.
 
 ## Current Trinity unification
 
@@ -90,5 +89,6 @@ XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L12_WITNESS.md` for the current self-observation contract and
+See `docs/L13_INTENT_PROPOSALS.md` for the inert intent contract,
+`docs/L12_WITNESS.md` for self-observation, and
 `docs/L11_ACTION_GATE.md` for the permission and NPC embodiment boundary.

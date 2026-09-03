@@ -21,6 +21,7 @@ include(cmake/SpiralCore.cmake)
 include(cmake/HakuiAvatarRig.cmake)
 include(cmake/HakuiInteraction.cmake)
 include(cmake/HakuiWitness.cmake)
+include(cmake/HakuiIntent.cmake)
 include(cmake/HakuiGameplay.cmake)
 include(cmake/HakuiAdapter.cmake)
 include(cmake/HakuiCortex.cmake)
@@ -125,6 +126,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             hakui_gameplay
             hakui_adapter
             hakui_cortex
+            hakui_intent
             hakui_presence
             hakui_input
             hakui_social

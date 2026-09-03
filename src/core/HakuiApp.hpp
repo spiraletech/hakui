@@ -18,6 +18,7 @@
 #include "interaction/InteractionService.hpp"
 #include "input/SdlInputBridge.hpp"
 #include "input/RideControlInterpreter.hpp"
+#include "intent/HakuiIntentProposal.hpp"
 #include "observer/ExpertObserver.hpp"
 #include "render/DebugWorldRenderer.hpp"
 #include "social/ChatSystem.hpp"
