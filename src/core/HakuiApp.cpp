@@ -455,6 +455,32 @@ void HakuiApp::recordObserverEvent(
 )
 {
     observerJournal_.record(world_.elapsedSeconds, category, message);
+
+    using hakui::witness::WitnessKind;
+    WitnessKind kind = WitnessKind::Observation;
+    if (category == "input" || category.starts_with("social.input")) {
+        kind = WitnessKind::Input;
+    } else if (category.starts_with("spiral.cortex")) {
+        kind = WitnessKind::Routing;
+    } else if (category.ends_with(".error")) {
+        kind = WitnessKind::Limitation;
+    } else if (category == "interaction" || category == "combat" ||
+               category == "locomotion" || category == "runtime" ||
+               category == "avatar.body_profile") {
+        kind = WitnessKind::Result;
+    }
+
+    if (kind == WitnessKind::Limitation) {
+        runtime_.witness().unknown(
+            world_.clock().step(), world_.elapsedSeconds, kind,
+            category, message
+        );
+    } else {
+        runtime_.witness().observed(
+            world_.clock().step(), world_.elapsedSeconds, kind,
+            category, message
+        );
+    }
 }
 
 hakui::observer::CaptureContext HakuiApp::buildObserverContext() const
@@ -909,6 +935,7 @@ hakui::observer::CaptureContext HakuiApp::buildObserverContext() const
     context.runtime.paused = paused_;
     context.runtime.worldRevision = spiral_.stateStore().revision();
     context.runtime.recentEvents = observerJournal_.entries();
+    context.witness = runtime_.witness().snapshot();
     return context;
 }
 

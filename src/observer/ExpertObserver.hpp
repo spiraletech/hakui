@@ -10,6 +10,7 @@
 
 #include "input/HakuiInput.hpp"
 #include "social/ChatSystem.hpp"
+#include "witness/HakuiWitness.hpp"
 #include "world/WorldGeometry.hpp"
 
 namespace hakui::observer {
@@ -199,6 +200,7 @@ struct CaptureContext {
     std::string currentInteractionIntent = "none";
     CameraObservation camera;
     RuntimeObservation runtime;
+    witness::WitnessSnapshot witness;
 };
 
 class RuntimeEventJournal {

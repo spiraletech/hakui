@@ -21,7 +21,7 @@ target_include_directories(hakui_observer
 )
 
 target_compile_features(hakui_observer PUBLIC cxx_std_20)
-target_link_libraries(hakui_observer PUBLIC hakui_input)
+target_link_libraries(hakui_observer PUBLIC hakui_input hakui_witness)
 
 if(MSVC)
     target_compile_options(hakui_observer PRIVATE /W4 /permissive-)

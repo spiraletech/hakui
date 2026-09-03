@@ -12,6 +12,8 @@ file(GLOB HAKUI_GAMEPLAY_FIREWALL_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_LIST_DIR}/../src/npc/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/action/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/action/*.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../src/witness/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/../src/witness/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/world/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/world/*.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/../src/core/GameRuntime.hpp"
@@ -39,6 +41,7 @@ target_include_directories(hakui_gameplay
 )
 
 target_compile_features(hakui_gameplay PUBLIC cxx_std_20)
+target_link_libraries(hakui_gameplay PUBLIC hakui_witness)
 
 if(MSVC)
     target_compile_options(hakui_gameplay PRIVATE /W4 /permissive-)

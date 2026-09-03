@@ -3,6 +3,8 @@
 #include "core/GameRuntime.hpp"
 #include "core/HakuiSnapshot.hpp"
 
+#include <string>
+
 namespace hakui {
 
 HakuiActionCapability HakuiActionGate::requiredCapability(
@@ -18,6 +20,7 @@ HakuiActionCapability HakuiActionGate::requiredCapability(
 }
 
 HakuiActionResult HakuiActionGate::finish(
+    GameRuntime& runtime,
     const HakuiActionRequest& request,
     HakuiActionStatus status,
     std::string_view detail
@@ -31,6 +34,17 @@ HakuiActionResult HakuiActionGate::finish(
     } else {
         ++audit_.denied;
     }
+    std::string witnessDetail = "request=" + std::to_string(request.requestId) +
+        " target=" + std::to_string(request.targetNpcId) +
+        " status=" + std::to_string(static_cast<unsigned>(status)) +
+        " // " + std::string(detail);
+    runtime.witness().observed(
+        runtime.world().clock().step(),
+        runtime.world().elapsedSeconds,
+        witness::WitnessKind::Decision,
+        "action.gate",
+        witnessDetail
+    );
     return {request.requestId, status, detail};
 }
 
@@ -42,13 +56,13 @@ HakuiActionResult HakuiActionGate::execute(
 {
     if (request.requestId == 0 || request.targetNpcId == 0 ||
         request.snapshotVersion != HakuiSnapshot::schemaVersion) {
-        return finish(request, HakuiActionStatus::InvalidRequest,
+        return finish(runtime, request, HakuiActionStatus::InvalidRequest,
                       "invalid L11 action envelope");
     }
 
     const std::uint64_t worldStep = runtime.world().clock().step();
     if (request.observedWorldStep != worldStep) {
-        return finish(request, HakuiActionStatus::StaleObservation,
+        return finish(runtime, request, HakuiActionStatus::StaleObservation,
                       "request does not target current world truth");
     }
 
@@ -59,12 +73,12 @@ HakuiActionResult HakuiActionGate::execute(
         worldStep < grant.validFromWorldStep ||
         worldStep > grant.validThroughWorldStep ||
         (grant.capabilities & neededMask) != neededMask) {
-        return finish(request, HakuiActionStatus::PermissionDenied,
+        return finish(runtime, request, HakuiActionStatus::PermissionDenied,
                       "host grant does not authorize this action");
     }
 
     if (runtime.npcs().find(request.targetNpcId) == nullptr) {
-        return finish(request, HakuiActionStatus::UnknownTarget,
+        return finish(runtime, request, HakuiActionStatus::UnknownTarget,
                       "target resident does not exist");
     }
 
@@ -82,9 +96,9 @@ HakuiActionResult HakuiActionGate::execute(
     }
 
     return accepted
-        ? finish(request, HakuiActionStatus::Executed,
+        ? finish(runtime, request, HakuiActionStatus::Executed,
                  "typed action accepted by NPC authority")
-        : finish(request, HakuiActionStatus::RejectedByAuthority,
+        : finish(runtime, request, HakuiActionStatus::RejectedByAuthority,
                  "NPC authority rejected action in current state");
 }
 

@@ -478,6 +478,34 @@ std::string runtimeLog(const RuntimeObservation& runtime)
     return output.str();
 }
 
+std::string witnessJson(const witness::WitnessSnapshot& snapshot)
+{
+    std::ostringstream output;
+    output << std::fixed << std::setprecision(3)
+           << "{\n  \"schema\": \"hakui.witness.v" << snapshot.version
+           << "\",\n  \"authority\": \"read_only_record\",\n"
+           << "  \"capacity\": " << snapshot.capacity
+           << ",\n  \"recorded\": " << snapshot.recorded
+           << ",\n  \"dropped\": " << snapshot.dropped
+           << ",\n  \"entries\": [\n";
+    for (std::size_t index = 0; index < snapshot.entries.size(); ++index) {
+        const witness::WitnessEntry& entry = snapshot.entries[index];
+        output << "    {\"sequence\":" << entry.sequence
+               << ",\"world_step\":" << entry.worldStep
+               << ",\"elapsed_seconds\":" << entry.elapsedSeconds
+               << ",\"kind\":\""
+               << witness::witnessKindLabel(entry.kind)
+               << "\",\"knowledge\":\""
+               << witness::witnessKnowledgeLabel(entry.knowledge)
+               << "\",\"category\":\"" << jsonEscape(entry.category)
+               << "\",\"detail\":\"" << jsonEscape(entry.detail)
+               << "\"}"
+               << (index + 1 == snapshot.entries.size() ? "\n" : ",\n");
+    }
+    output << "  ]\n}\n";
+    return output.str();
+}
+
 std::string doctrineJson()
 {
     return R"({
@@ -647,6 +675,7 @@ ExportResult ExpertObserver::capture(
         !write("SocialSnapshot.json", socialJson(context.social)) ||
         !write("CameraSnapshot.json", cameraJson(context.camera)) ||
         !write("RuntimeSnapshot.json", runtimeJson(context.runtime)) ||
+        !write("WitnessSnapshot.json", witnessJson(context.witness)) ||
         !write("Runtime.log", runtimeLog(context.runtime)) ||
         !write("MapSnapshot.svg", mapSvg(context)) ||
         !write("HakuiDoctrine.json", doctrineJson())) {
@@ -683,6 +712,7 @@ ExportResult ExpertObserver::capture(
              << "    \"social\": \"SocialSnapshot.json\",\n"
              << "    \"camera\": \"CameraSnapshot.json\",\n"
              << "    \"runtime_state\": \"RuntimeSnapshot.json\",\n"
+             << "    \"witness\": \"WitnessSnapshot.json\",\n"
              << "    \"map\": \"MapSnapshot.svg\",\n"
              << "    \"frame\": \"FrameSnapshot.png\",\n"
              << "    \"runtime_log\": \"Runtime.log\",\n"

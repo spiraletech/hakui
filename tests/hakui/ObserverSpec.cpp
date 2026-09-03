@@ -152,6 +152,20 @@ int main()
     context.camera.position = {2.0f, 3.0f, 6.0f};
     context.camera.target = {0.0f, 1.25f, 2.0f};
     context.runtime.recentEvents = {"[0.000] [boot] WORLD ONLINE"};
+    witness::HakuiWitness witness{8};
+    witness.observed(
+        4, 1.25f, witness::WitnessKind::Input,
+        "input", "gamepad connected"
+    );
+    witness.inferred(
+        4, 1.25f, witness::WitnessKind::Decision,
+        "routing", "controller route selected from active device"
+    );
+    witness.unknown(
+        4, 1.25f, witness::WitnessKind::Limitation,
+        "cortex", "model intent unavailable"
+    );
+    context.witness = witness.snapshot();
 
     const ExportResult result = ExpertObserver::capture(
         context,
@@ -183,6 +197,7 @@ int main()
         "SocialSnapshot.json",
         "CameraSnapshot.json",
         "RuntimeSnapshot.json",
+        "WitnessSnapshot.json",
         "MapSnapshot.svg",
         "FrameSnapshot.png",
         "Runtime.log",
@@ -197,9 +212,17 @@ int main()
     const std::string input = readText(result.bundlePath / "InputSnapshot.json");
     const std::string entities = readText(result.bundlePath / "EntitySnapshot.json");
     const std::string social = readText(result.bundlePath / "SocialSnapshot.json");
+    const std::string witnessRecord =
+        readText(result.bundlePath / "WitnessSnapshot.json");
     const std::string map = readText(result.bundlePath / "MapSnapshot.svg");
     assert(manifest.find("hakui.expert-observer.v1") != std::string::npos);
     assert(manifest.find("read_only_observer") != std::string::npos);
+    assert(manifest.find("WitnessSnapshot.json") != std::string::npos);
+    assert(witnessRecord.find("hakui.witness.v1") != std::string::npos);
+    assert(witnessRecord.find("\"knowledge\":\"observed\"") != std::string::npos);
+    assert(witnessRecord.find("\"knowledge\":\"inferred\"") != std::string::npos);
+    assert(witnessRecord.find("\"knowledge\":\"unknown\"") != std::string::npos);
+    assert(witnessRecord.find("model intent unavailable") != std::string::npos);
     assert(world.find("primitive.0001") != std::string::npos);
     assert(world.find("CasinoAnchor") != std::string::npos);
     assert(world.find("\"seat_anchors\"") != std::string::npos);
