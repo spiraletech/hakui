@@ -14,12 +14,14 @@ enum class HakuiActionSource : std::uint8_t {
 
 enum class HakuiActionVerb : std::uint8_t {
     NpcObservePlayer,
-    NpcResumeRoutine
+    NpcResumeRoutine,
+    NpcWalkToPlayer
 };
 
 enum class HakuiActionCapability : std::uint32_t {
     None = 0,
-    NpcAttention = 1U << 0U
+    NpcAttention = 1U << 0U,
+    NpcNavigation = 1U << 1U
 };
 
 using HakuiActionCapabilityMask = std::uint32_t;

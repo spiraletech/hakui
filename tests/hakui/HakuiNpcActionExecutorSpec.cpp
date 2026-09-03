@@ -2,6 +2,7 @@
 #include "core/GameRuntime.hpp"
 #include "npc/NpcManager.hpp"
 #include <cassert>
+#include <cmath>
 
 int main()
 {
@@ -28,7 +29,21 @@ int main()
     walk.id = 8;
     walk.verb = intent::IntentVerb::WalkTo;
     approval.proposalId = 8;
-    assert(executor.execute(runtime, walk, approval).status ==
-           NpcExecutionStatus::UnsupportedVerb);
+    approval.capabilities = actionCapability(HakuiActionCapability::NpcNavigation);
+    runtime.player().x = runtime.blackRoom().movementEnvironment().spawnX;
+    runtime.player().z = runtime.blackRoom().movementEnvironment().spawnZ;
+    assert(executor.execute(runtime, walk, approval).executed());
+    const NpcState* saelis = runtime.npcs().find(NpcManager::saelisId);
+    assert(saelis && saelis->navigationCommandActive);
+    for (int tick = 0; tick < 240 && saelis->navigationCommandActive; ++tick) {
+        runtime.advanceWorld(0.1f);
+        saelis = runtime.npcs().find(NpcManager::saelisId);
+    }
+    assert(saelis && !saelis->navigationCommandActive);
+    assert(saelis->activity == NpcActivity::ObservingPlayer);
+    const float dx = saelis->x - runtime.player().x;
+    const float dz = saelis->z - runtime.player().z;
+    const float distance = std::sqrt(dx * dx + dz * dz);
+    assert(distance >= 0.70f && distance <= 1.10f);
     return 0;
 }

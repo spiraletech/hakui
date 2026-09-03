@@ -15,6 +15,8 @@ HakuiActionCapability HakuiActionGate::requiredCapability(
         case HakuiActionVerb::NpcObservePlayer:
         case HakuiActionVerb::NpcResumeRoutine:
             return HakuiActionCapability::NpcAttention;
+        case HakuiActionVerb::NpcWalkToPlayer:
+            return HakuiActionCapability::NpcNavigation;
     }
     return HakuiActionCapability::None;
 }
@@ -92,6 +94,10 @@ HakuiActionResult HakuiActionGate::execute(
             break;
         case HakuiActionVerb::NpcResumeRoutine:
             accepted = runtime.npcs().requestResumeRoutine(request.targetNpcId);
+            break;
+        case HakuiActionVerb::NpcWalkToPlayer:
+            accepted = runtime.npcs().requestWalkToPlayer(
+                request.targetNpcId, runtime.player(), runtime.blackRoom());
             break;
     }
 

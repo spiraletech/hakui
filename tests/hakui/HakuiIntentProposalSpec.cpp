@@ -24,6 +24,11 @@ int main()
     assert(natural);
     assert(natural->id == 90);
     assert(natural->verb == IntentVerb::LookAt);
+    const auto comeHere = IntentProposalParser::parsePlayerCommand(
+        "Saelis, come here please", 91);
+    assert(comeHere);
+    assert(comeHere->id == 91);
+    assert(comeHere->verb == IntentVerb::WalkTo);
     assert(!IntentProposalParser::parsePlayerCommand("look at me", 91));
     assert(!IntentProposalParser::parsePlayerCommand("Saelis sit down", 92));
     return 0;

@@ -20,13 +20,16 @@ NpcExecutionResult HakuiNpcActionExecutor::execute(
         return {NpcExecutionStatus::InvalidActor, HakuiActionStatus::UnknownTarget};
     if (proposal.targetId != 1)
         return {NpcExecutionStatus::InvalidTarget, HakuiActionStatus::UnknownTarget};
-    if (proposal.verb != intent::IntentVerb::LookAt)
+    if (proposal.verb != intent::IntentVerb::LookAt &&
+        proposal.verb != intent::IntentVerb::WalkTo)
         return {NpcExecutionStatus::UnsupportedVerb, HakuiActionStatus::InvalidRequest};
 
     const std::uint64_t step = runtime.world().clock().step();
     const HakuiActionRequest request{
         proposal.id, approval.source,
-        HakuiActionVerb::NpcObservePlayer,
+        proposal.verb == intent::IntentVerb::WalkTo
+            ? HakuiActionVerb::NpcWalkToPlayer
+            : HakuiActionVerb::NpcObservePlayer,
         static_cast<std::uint32_t>(proposal.actorId),
         HakuiSnapshot::schemaVersion, step
     };

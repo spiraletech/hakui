@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -40,6 +42,8 @@ struct NpcNeeds {
     float fun = 74.0f;
 };
 
+struct NpcNavigationPoint { float x = 0.0f; float z = 0.0f; };
+
 // L10 deterministic resident state. This is objective HAKUI simulation truth,
 // not language-model context or character prose. A cortex may observe a copy of
 // this state later, but it does not own these values or the routine clock.
@@ -71,6 +75,11 @@ struct NpcState {
     float targetX = 0.0f;
     float targetY = 0.0f;
     float targetZ = 0.0f;
+
+    std::array<NpcNavigationPoint, 64> navigationWaypoints{};
+    std::size_t navigationWaypointCount = 0;
+    std::size_t navigationWaypointIndex = 0;
+    bool navigationCommandActive = false;
 
     NpcActivity activity = NpcActivity::Idle;
     NpcMood mood = NpcMood::Calm;
