@@ -87,6 +87,30 @@ public:
     const SeatAnchor* seatAnchorById(std::uint32_t id) const noexcept;
     ResolvedSeatAnchor resolvedSeatAnchor(std::uint32_t id) const noexcept;
     bool seatOccupied(std::uint32_t id) const noexcept;
+
+    // L10 shared furniture reservation seam. Player interaction and NPC
+    // simulation now consult the same seat truth instead of giving residents a
+    // second private occupancy model. The room remains the seat authority.
+    bool reserveSeat(std::uint32_t id) noexcept
+    {
+        SeatAnchor* seat = mutableSeatAnchorById(id);
+        if (!seat || seat->occupied) {
+            return false;
+        }
+        seat->occupied = true;
+        return true;
+    }
+
+    bool releaseSeat(std::uint32_t id) noexcept
+    {
+        SeatAnchor* seat = mutableSeatAnchorById(id);
+        if (!seat || !seat->occupied) {
+            return false;
+        }
+        seat->occupied = false;
+        return true;
+    }
+
     float seatAlignmentError(const PlayerState& player) const noexcept;
     RoomInteractionFocus nearestInteraction(const PlayerState& player) const noexcept;
     bool engageNearest(PlayerState& player) noexcept;

@@ -10,11 +10,10 @@
 
 namespace hakui {
 
-// L6 versioned, read-only truth packet.
+// Versioned, read-only HAKUI truth packet.
 //
 // Snapshot values are owned copies: no pointer/reference into GameRuntime is
-// exposed. This is the contract later consumed by HakuiAdapter/Spiral and by
-// external observers without granting mutation authority over simulation.
+// exposed. L10 adds resident/NPC truth without changing that authority rule.
 struct HakuiAnchorSnapshot {
     float x = 0.0f;
     float y = 0.0f;
@@ -75,6 +74,42 @@ struct HakuiPlayerSnapshot {
     float money = 0.0f;
 };
 
+struct HakuiNpcNeedsSnapshot {
+    float hunger = 0.0f;
+    float energy = 0.0f;
+    float social = 0.0f;
+    float comfort = 0.0f;
+    float fun = 0.0f;
+};
+
+struct HakuiNpcSnapshot {
+    std::uint32_t id = 0;
+    std::string displayName;
+
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+    float yaw = 0.0f;
+    float velocityX = 0.0f;
+    float velocityZ = 0.0f;
+
+    float targetX = 0.0f;
+    float targetY = 0.0f;
+    float targetZ = 0.0f;
+
+    NpcActivity activity = NpcActivity::Idle;
+    NpcMood mood = NpcMood::Calm;
+    NpcRoutinePhase routine = NpcRoutinePhase::IdleHome;
+
+    std::uint32_t activeAffordanceId = 0;
+    std::uint32_t activeSeatAnchorId = 0;
+    bool seatOccupancy = false;
+    std::uint64_t simulationTicks = 0;
+    std::uint32_t routineCycles = 0;
+
+    HakuiNpcNeedsSnapshot needs{};
+};
+
 struct HakuiWorldSnapshot {
     std::uint32_t schemaVersion = HakuiWorldState::schemaVersion;
     std::string worldId;
@@ -89,8 +124,8 @@ struct HakuiWorldSnapshot {
     std::size_t occupiedSeatCount = 0;
 
     // Semantic world truth only. Raw render geometry is deliberately omitted;
-    // L7 can reason about usable world affordances without becoming coupled to
-    // presentation primitives.
+    // inspection/cognition can reason about usable world affordances without
+    // becoming coupled to presentation primitives.
     std::vector<HakuiAffordanceSnapshot> affordances;
     std::vector<HakuiSeatSnapshot> seats;
 };
@@ -100,11 +135,14 @@ struct HakuiInteractionSnapshot {
 };
 
 struct HakuiSnapshot {
-    static constexpr std::uint32_t schemaVersion = 1;
+    // v2 adds deterministic NPC resident copies. Earlier world/player fields
+    // retain their meaning and remain owned immutable values after capture.
+    static constexpr std::uint32_t schemaVersion = 2;
 
     std::uint32_t version = schemaVersion;
     HakuiWorldSnapshot world;
     HakuiPlayerSnapshot player;
+    std::vector<HakuiNpcSnapshot> npcs;
     HakuiInteractionSnapshot interactions;
 };
 
@@ -190,6 +228,36 @@ struct HakuiSnapshot {
     snapshot.player.hunger = player.hunger;
     snapshot.player.stamina = player.stamina;
     snapshot.player.money = player.money;
+
+    snapshot.npcs.reserve(runtime.npcs().states().size());
+    for (const NpcState& npc : runtime.npcs().states()) {
+        HakuiNpcSnapshot resident;
+        resident.id = npc.id;
+        resident.displayName = npc.displayName;
+        resident.x = npc.x;
+        resident.y = npc.y;
+        resident.z = npc.z;
+        resident.yaw = npc.yaw;
+        resident.velocityX = npc.velocityX;
+        resident.velocityZ = npc.velocityZ;
+        resident.targetX = npc.targetX;
+        resident.targetY = npc.targetY;
+        resident.targetZ = npc.targetZ;
+        resident.activity = npc.activity;
+        resident.mood = npc.mood;
+        resident.routine = npc.routine;
+        resident.activeAffordanceId = npc.activeAffordanceId;
+        resident.activeSeatAnchorId = npc.activeSeatAnchorId;
+        resident.seatOccupancy = npc.seatOccupancy;
+        resident.simulationTicks = npc.simulationTicks;
+        resident.routineCycles = npc.routineCycles;
+        resident.needs.hunger = npc.needs.hunger;
+        resident.needs.energy = npc.needs.energy;
+        resident.needs.social = npc.needs.social;
+        resident.needs.comfort = npc.needs.comfort;
+        resident.needs.fun = npc.needs.fun;
+        snapshot.npcs.push_back(std::move(resident));
+    }
 
     snapshot.interactions.liveTargetIds =
         runtime.interactionRegistry().liveTargetIds();

@@ -11,6 +11,7 @@
 #include "avatar/BodyProfile.hpp"
 #include "camera/ThirdPersonCameraRig.hpp"
 #include "combat/CombatSimulation.hpp"
+#include "npc/NpcState.hpp"
 #include "player/PlayerState.hpp"
 #include "player/RideableMovementController.hpp"
 #include "social/ChatSystem.hpp"
@@ -78,6 +79,12 @@ struct HakuiSceneState {
     hakui::social::SocialGesture socialGesture =
         hakui::social::SocialGesture::None;
     float socialGestureWeight = 0.0f;
+
+    // L10 presentation view of authoritative resident state. Renderer receives
+    // a non-owning read-only span for the current frame; simulation remains in
+    // GameRuntime/NpcManager and continues headless when rendering is absent.
+    std::span<const hakui::NpcState> npcs{};
+
     bool spiralPresenceVisible = false;
     bool spiralPresenceLinked = false;
     bool spiralPresencePlayerInRange = false;

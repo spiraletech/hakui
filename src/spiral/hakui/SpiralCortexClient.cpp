@@ -261,6 +261,33 @@ std::string SpiralCortexClient::buildReadOnlyContext(
     stream << "interaction.live_target_count="
            << snapshot.interactions.liveTargetIds.size() << '\n';
 
+    stream << "npc.count=" << snapshot.npcs.size() << '\n';
+    for (std::size_t index = 0; index < snapshot.npcs.size(); ++index) {
+        const HakuiNpcSnapshot& npc = snapshot.npcs[index];
+        stream << "npc." << index << ".id=" << npc.id << '\n';
+        stream << "npc." << index << ".name="
+               << sanitize_line(npc.displayName) << '\n';
+        stream << "npc." << index << ".position="
+               << npc.x << ',' << npc.y << ',' << npc.z << '\n';
+        stream << "npc." << index << ".yaw=" << npc.yaw << '\n';
+        stream << "npc." << index << ".activity="
+               << static_cast<unsigned>(npc.activity) << '\n';
+        stream << "npc." << index << ".mood="
+               << static_cast<unsigned>(npc.mood) << '\n';
+        stream << "npc." << index << ".routine="
+               << static_cast<unsigned>(npc.routine) << '\n';
+        stream << "npc." << index << ".active_affordance_id="
+               << npc.activeAffordanceId << '\n';
+        stream << "npc." << index << ".active_seat_id="
+               << npc.activeSeatAnchorId << '\n';
+        stream << "npc." << index << ".needs="
+               << npc.needs.hunger << ','
+               << npc.needs.energy << ','
+               << npc.needs.social << ','
+               << npc.needs.comfort << ','
+               << npc.needs.fun << '\n';
+    }
+
     for (std::size_t index = 0; index < snapshot.world.affordances.size(); ++index) {
         const HakuiAffordanceSnapshot& affordance = snapshot.world.affordances[index];
         stream << "affordance." << index << ".id=" << affordance.id << '\n';

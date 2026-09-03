@@ -2322,6 +2322,52 @@ bool DebugWorldRenderer::render(
         }
     }
 
+    // L10 NPC RESIDENTS // deterministic presentation
+    // Simulation owns the transforms/activities. The debug renderer only draws
+    // a lightweight resident shell from the read-only frame span.
+    for (const hakui::NpcState& npc : scene.npcs) {
+        const bool seated = npc.activity == hakui::NpcActivity::Seated;
+        const bool curious =
+            npc.mood == hakui::NpcMood::Curious ||
+            npc.activity == hakui::NpcActivity::ObservingPlayer ||
+            npc.activity == hakui::NpcActivity::ObservingSpiral;
+
+        const Mat4 npcRoot = multiply(
+            translation({npc.x, npc.y, npc.z}),
+            rotationY(npc.yaw)
+        );
+
+        auto npcBox = [&](const Vec3& position,
+                          const Vec3& dimensions,
+                          Uint32 palette) {
+            drawModel(multiply(
+                npcRoot,
+                multiply(translation(position), scale(dimensions))
+            ), palette);
+        };
+
+        const Uint32 bodyPalette = curious ? Cyan : Magenta;
+        const Uint32 accentPalette = seated ? Amber : Cyan;
+        const float pelvisY = seated ? 0.82f : 1.00f;
+        const float torsoY = seated ? 1.38f : 1.72f;
+        const float headY = seated ? 2.12f : 2.60f;
+        const float legY = seated ? 0.42f : 0.70f;
+        const float legHeight = seated ? 0.78f : 1.40f;
+
+        npcBox({-0.19f, legY, 0.0f}, {0.25f, legHeight, 0.30f}, Midnight);
+        npcBox({ 0.19f, legY, 0.0f}, {0.25f, legHeight, 0.30f}, Midnight);
+        npcBox({0.0f, pelvisY, 0.0f}, {0.62f, 0.34f, 0.38f}, bodyPalette);
+        npcBox({0.0f, torsoY, 0.0f}, {0.78f, 0.86f, 0.42f}, bodyPalette);
+        npcBox({-0.50f, torsoY, 0.0f}, {0.18f, 0.88f, 0.20f}, Shell);
+        npcBox({ 0.50f, torsoY, 0.0f}, {0.18f, 0.88f, 0.20f}, Shell);
+        npcBox({0.0f, headY - 0.34f, 0.0f}, {0.18f, 0.20f, 0.18f}, accentPalette);
+        npcBox({0.0f, headY, 0.0f}, {0.48f, 0.54f, 0.46f}, Shell);
+
+        // Thin cyan/magenta datum above the resident keeps the first NPC easy to
+        // locate without pretending L10 already has final nameplate/UI systems.
+        npcBox({0.0f, headY + 0.43f, 0.0f}, {0.72f, 0.045f, 0.045f}, accentPalette);
+    }
+
     if (scene.sparDummyVisible) {
         using hakui::combat::AttackSemantic;
         using hakui::combat::CombatState;

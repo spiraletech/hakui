@@ -99,6 +99,13 @@ HakuiNearbyInspection HakuiAdapter::inspectNearby(float radius) const
     return deriveNearby(snapshot(), radius);
 }
 
+HakuiNpcInspection HakuiAdapter::inspectNpcs() const
+{
+    HakuiNpcInspection inspection;
+    inspection.npcs = snapshot().npcs;
+    return inspection;
+}
+
 HakuiTimeInspection HakuiAdapter::inspectTime() const
 {
     const HakuiSnapshot current = snapshot();
@@ -146,6 +153,10 @@ HakuiAdapterResult HakuiAdapter::execute(
         result.payload = current.player;
     } else if (command == inspectNearbyCommand) {
         result.payload = deriveNearby(current, nearbyRadius);
+    } else if (command == inspectNpcsCommand) {
+        HakuiNpcInspection inspection;
+        inspection.npcs = current.npcs;
+        result.payload = std::move(inspection);
     } else if (command == inspectTimeCommand) {
         result.payload = HakuiTimeInspection{
             current.world.elapsedSeconds,

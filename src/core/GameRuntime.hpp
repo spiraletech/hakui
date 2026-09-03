@@ -1,17 +1,18 @@
 #pragma once
 
 #include "interaction/InteractionRegistry.hpp"
+#include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
 #include "world/HakuiWorldState.hpp"
 
 namespace hakui {
 
-// L5 deterministic authority root.
+// Deterministic authority root.
 //
-// GameRuntime no longer stores player controllers/state as loose siblings.
-// World, player and interaction membership each have one explicit owner while
-// platform-bound routing, SDL, rendering, audio, chat, combat and Spiral
-// orchestration stay outside this class.
+// L10 extends the L5 split with an explicit NPC authority. World, player,
+// residents and interaction membership each have one owner while platform
+// input, rendering, audio, chat, combat and Spiral orchestration remain outside
+// this class.
 class GameRuntime final {
 public:
     GameRuntime() = default;
@@ -26,11 +27,14 @@ public:
     PlayerRuntime& playerRuntime() noexcept { return player_; }
     const PlayerRuntime& playerRuntime() const noexcept { return player_; }
 
+    NpcManager& npcs() noexcept { return npcs_; }
+    const NpcManager& npcs() const noexcept { return npcs_; }
+
     InteractionRegistry& interactionRegistry() noexcept { return interactions_; }
     const InteractionRegistry& interactionRegistry() const noexcept { return interactions_; }
 
     // Compatibility accessors for the existing native-client call sites.
-    // These delegate into the explicit L5 authority roots rather than exposing
+    // These delegate into explicit authority roots rather than exposing
     // duplicate state.
     BlackRoom& blackRoom() noexcept { return world_.blackRoom(); }
     const BlackRoom& blackRoom() const noexcept { return world_.blackRoom(); }
@@ -44,9 +48,16 @@ public:
     RideableMovementController& rideable() noexcept { return player_.rideable(); }
     const RideableMovementController& rideable() const noexcept { return player_.rideable(); }
 
+    // Advance one accepted deterministic simulation delta. NPCs tick only when
+    // the canonical world clock accepts the delta, so invalid/overflow deltas
+    // cannot mutate resident state while leaving world time unchanged.
     void advanceWorld(float deltaSeconds) noexcept
     {
+        const std::uint64_t beforeStep = world_.clock().step();
         world_.advance(deltaSeconds);
+        if (world_.clock().step() != beforeStep) {
+            npcs_.tick(world_.blackRoom(), player_.state(), deltaSeconds);
+        }
     }
 
     // Reset only player/ride state against the current authored world.
@@ -62,11 +73,13 @@ public:
     {
         world_.reset();
         resetPlayerToSpawn(startingMoney);
+        npcs_.reset(world_.blackRoom());
     }
 
 private:
     HakuiWorldState world_{};
     PlayerRuntime player_{};
+    NpcManager npcs_{};
     InteractionRegistry interactions_{};
 };
 
