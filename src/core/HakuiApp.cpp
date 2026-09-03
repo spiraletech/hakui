@@ -235,6 +235,8 @@ bool HakuiApp::boot()
     SDL_Log("[HAKUI] v1.01 social glass // speech floats with the speaker");
     SDL_Log("[HAKUI] procedural locomotion // idle + walk + sprint + jump + seated online");
     SDL_Log("[HAKUI] BLACK ROOM // neon lounge + couch + fusion table + open void");
+    SDL_Log("[HAKUI] NPC SIM // %zu resident(s) // SAELIS // deterministic // cortex optional",
+            runtime_.npcs().states().size());
     SDL_Log("[HAKUI] controls // WASD move // SPACE jump // E interact/stand // SHIFT sprint // F6 body");
     SDL_Log("[HAKUI] camera // RMB orbit // WHEEL zoom // R reset");
     SDL_Log("[HAKUI] menu // ESC pause // [ ] look sensitivity // - + audio // F10 quit");
@@ -1991,7 +1993,7 @@ void HakuiApp::update(float dt)
         // ChatInput has exclusive ownership. Simulation time and idle/social
         // presentation continue, while locomotion, combat, interaction, ride,
         // camera, pause, and developer actions consume no sampled hardware.
-        world_.elapsedSeconds += dt;
+        runtime_.advanceWorld(dt);
         spiral_.tick(dt);
         rideControls_.reset();
         rideControlFrame_ = {};
@@ -2038,7 +2040,7 @@ void HakuiApp::update(float dt)
     }
 
     if (!paused_) {
-        world_.elapsedSeconds += dt;
+        runtime_.advanceWorld(dt);
 
         const bool rideActiveAtInput =
             player_.locomotion == LocomotionMode::Skateboard ||
@@ -2379,6 +2381,7 @@ bool HakuiApp::render()
         cortexStatus_
     );
     HakuiSceneState scene;
+    scene.npcs = runtime_.npcs().states();
     scene.spiralPresenceVisible = true;
     scene.spiralPresenceLinked = spiralPresenceView.linked;
     scene.spiralPresencePlayerInRange = spiralPresenceView.playerInRange;
