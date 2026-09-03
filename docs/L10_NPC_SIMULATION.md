@@ -75,6 +75,25 @@ The L9 cortex observation packet is extended with copied resident state. This do
 
 The SDL client advances accepted simulation deltas through `GameRuntime::advanceWorld()` so NPC and world clocks share one accepted timeline. The debug renderer receives a read-only resident span and draws a lightweight Saelis mannequin. Final animation/nameplate/avatar systems remain later layers.
 
+## Validation gate
+
+The integrated native client must prove the same resident authority used by the headless contracts:
+
+```text
+boot
+→ SAELIS visible in Black Room
+→ independent movement while cortex is absent or limited
+→ player approach causes bounded face/observe reaction
+→ SAELIS reserves one Void Couch seat
+→ player can only use remaining free couch seat
+→ SAELIS releases seat after rest
+→ resident continues toward Spiral Presence
+→ F6 / skate / BMX / combat / local chat remain playable
+→ L9 Spiral conversation remains read-only
+```
+
+The Windows package is accepted only after canonical contracts and the full native build/package pipeline pass on the final integrated branch head.
+
 ## L10 invariants
 
 - HAKUI NPC life functions with the cortex process absent.
