@@ -1,6 +1,7 @@
 #include "intent/HakuiIntentProposal.hpp"
 
 #include <charconv>
+#include <cctype>
 
 namespace hakui::intent {
 namespace {
@@ -57,6 +58,33 @@ ProposalBatch IntentProposalParser::parse(std::string_view text, std::uint64_t n
                                    std::string(argument), std::string(line)});
     }
     return batch;
+}
+
+std::optional<IntentProposal> IntentProposalParser::parsePlayerCommand(
+    std::string_view text,
+    std::uint64_t proposalId
+)
+{
+    std::string normalized;
+    normalized.reserve(text.size());
+    bool previousSpace = true;
+    for (const unsigned char character : text) {
+        if (std::isalnum(character)) {
+            normalized.push_back(static_cast<char>(std::tolower(character)));
+            previousSpace = false;
+        } else if (!previousSpace) {
+            normalized.push_back(' ');
+            previousSpace = true;
+        }
+    }
+    while (!normalized.empty() && normalized.back() == ' ') normalized.pop_back();
+    const bool namesSaelis = normalized.find("saelis") != std::string::npos;
+    const bool asksLook = normalized.find("look at me") != std::string::npos ||
+        normalized.find("face me") != std::string::npos ||
+        normalized.find("look over here") != std::string::npos;
+    if (!namesSaelis || !asksLook || proposalId == 0) return std::nullopt;
+    return IntentProposal{proposalId, IntentVerb::LookAt, 2001, 1,
+                          "player", std::string(text)};
 }
 
 std::string_view intentVerbLabel(IntentVerb value) noexcept

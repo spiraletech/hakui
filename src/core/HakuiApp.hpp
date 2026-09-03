@@ -13,6 +13,7 @@
 #include "avatar/BodyProfileController.hpp"
 #include "avatar/HakuiSkeleton.hpp"
 #include "combat/CombatSimulation.hpp"
+#include "action/HakuiNpcActionExecutor.hpp"
 #include "core/GameRuntime.hpp"
 #include "games/GameTerminal.hpp"
 #include "interaction/InteractionService.hpp"
@@ -118,6 +119,8 @@ private:
     // replies return through a shared mailbox on the main thread.
     hakui::SpiralCortexClient cortexClient_{};
     hakui::SpiralCortexStatus cortexStatus_{};
+    hakui::HakuiNpcActionExecutor npcActionExecutor_{};
+    std::uint64_t nextProposalId_ = 1;
     std::shared_ptr<CortexMailbox> cortexMailbox_ =
         std::make_shared<CortexMailbox>();
     float cortexProbeTimer_ = 0.0f;
