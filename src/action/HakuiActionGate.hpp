@@ -102,6 +102,7 @@ private:
         HakuiActionVerb verb
     ) noexcept;
     HakuiActionResult finish(
+        GameRuntime& runtime,
         const HakuiActionRequest& request,
         HakuiActionStatus status,
         std::string_view detail

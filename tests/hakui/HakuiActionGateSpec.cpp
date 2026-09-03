@@ -51,6 +51,8 @@ int main()
     assert(denied.status == HakuiActionStatus::PermissionDenied);
     assert(saelis->activity == NpcActivity::Walking);
     assert(saelis->yaw == originalYaw);
+    assert(runtime.witness().recorded() == 1);
+    assert(runtime.witness().snapshot().entries.back().category == "action.gate");
 
     HakuiActionGrant grant = attentionGrant(runtime);
     HakuiActionResult accepted = gate.execute(runtime, request, grant);
@@ -77,5 +79,10 @@ int main()
     assert(audit.executed == 1);
     assert(audit.denied == 4);
     assert(audit.lastRequestId == 2);
+    const witness::WitnessSnapshot witness = runtime.witness().snapshot();
+    assert(witness.recorded == audit.evaluated);
+    assert(witness.entries.back().kind == witness::WitnessKind::Decision);
+    assert(witness.entries.back().detail.find("target resident does not exist") !=
+           std::string::npos);
     return 0;
 }

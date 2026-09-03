@@ -4,6 +4,7 @@
 #include "interaction/InteractionRegistry.hpp"
 #include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
+#include "witness/HakuiWitness.hpp"
 #include "world/HakuiWorldState.hpp"
 
 namespace hakui {
@@ -33,6 +34,9 @@ public:
 
     HakuiActionGate& actionGate() noexcept { return actionGate_; }
     const HakuiActionGate& actionGate() const noexcept { return actionGate_; }
+
+    witness::HakuiWitness& witness() noexcept { return witness_; }
+    const witness::HakuiWitness& witness() const noexcept { return witness_; }
 
     InteractionRegistry& interactionRegistry() noexcept { return interactions_; }
     const InteractionRegistry& interactionRegistry() const noexcept { return interactions_; }
@@ -78,6 +82,13 @@ public:
         world_.reset();
         resetPlayerToSpawn(startingMoney);
         npcs_.reset(world_.blackRoom());
+        witness_.observed(
+            world_.clock().step(),
+            world_.elapsedSeconds,
+            witness::WitnessKind::Mutation,
+            "runtime.session",
+            "authoritative world, player, and NPC state reset"
+        );
     }
 
 private:
@@ -85,6 +96,7 @@ private:
     PlayerRuntime player_{};
     NpcManager npcs_{};
     HakuiActionGate actionGate_{};
+    witness::HakuiWitness witness_{256};
     InteractionRegistry interactions_{};
 };
 
