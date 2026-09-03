@@ -4,6 +4,11 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
+Current vertical layer: **L11**. The first resident, Saelis, uses the approved
+female base mannequin with player-compatible locomotion and corrected shared
+seating pose. Cognition may request only typed, explicitly granted actions
+through `HakuiActionGate`; HAKUI remains world authority.
+
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
@@ -83,3 +88,6 @@ AvatarRig
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
+
+See `docs/L11_ACTION_GATE.md` for the current permission and NPC embodiment
+contract.

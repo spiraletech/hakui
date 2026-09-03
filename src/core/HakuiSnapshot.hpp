@@ -85,6 +85,7 @@ struct HakuiNpcNeedsSnapshot {
 struct HakuiNpcSnapshot {
     std::uint32_t id = 0;
     std::string displayName;
+    avatar::BodyProfileId bodyProfile = avatar::BodyProfileId::Female;
 
     float x = 0.0f;
     float y = 0.0f;
@@ -92,6 +93,9 @@ struct HakuiNpcSnapshot {
     float yaw = 0.0f;
     float velocityX = 0.0f;
     float velocityZ = 0.0f;
+    float movementBlend = 0.0f;
+    float gaitPhase = 0.0f;
+    float idlePhase = 0.0f;
 
     float targetX = 0.0f;
     float targetY = 0.0f;
@@ -234,12 +238,16 @@ struct HakuiSnapshot {
         HakuiNpcSnapshot resident;
         resident.id = npc.id;
         resident.displayName = npc.displayName;
+        resident.bodyProfile = npc.bodyProfile;
         resident.x = npc.x;
         resident.y = npc.y;
         resident.z = npc.z;
         resident.yaw = npc.yaw;
         resident.velocityX = npc.velocityX;
         resident.velocityZ = npc.velocityZ;
+        resident.movementBlend = npc.movementBlend;
+        resident.gaitPhase = npc.gaitPhase;
+        resident.idlePhase = npc.idlePhase;
         resident.targetX = npc.targetX;
         resident.targetY = npc.targetY;
         resident.targetZ = npc.targetZ;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "action/HakuiActionGate.hpp"
 #include "interaction/InteractionRegistry.hpp"
 #include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
@@ -29,6 +30,9 @@ public:
 
     NpcManager& npcs() noexcept { return npcs_; }
     const NpcManager& npcs() const noexcept { return npcs_; }
+
+    HakuiActionGate& actionGate() noexcept { return actionGate_; }
+    const HakuiActionGate& actionGate() const noexcept { return actionGate_; }
 
     InteractionRegistry& interactionRegistry() noexcept { return interactions_; }
     const InteractionRegistry& interactionRegistry() const noexcept { return interactions_; }
@@ -80,6 +84,7 @@ private:
     HakuiWorldState world_{};
     PlayerRuntime player_{};
     NpcManager npcs_{};
+    HakuiActionGate actionGate_{};
     InteractionRegistry interactions_{};
 };
 
