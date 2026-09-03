@@ -9,6 +9,12 @@ The first executable shape is intentionally narrow:
 
 `Saelis LookAt player → NpcObservePlayer → HakuiActionGate → NpcManager`
 
+The player-facing path uses natural chat: **“Saelis, look at me.”** HAKUI's
+bounded local grammar converts that request into the same typed proposal and
+approval path, displays a clear success/denial status, and requires neither a
+protocol string nor a separately launched Cortex process. The protocol envelope
+remains available only as an internal Cortex/contract format.
+
 The native host grants only `NpcAttention`, only to Saelis (`2001`), only for
 player target `1`, and only for the current world step. The L11 gate performs
 its own independent source, target, capability, freshness and authority checks.

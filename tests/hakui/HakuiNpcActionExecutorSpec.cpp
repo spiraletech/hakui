@@ -11,7 +11,8 @@ int main()
     const intent::IntentProposal look{7, intent::IntentVerb::LookAt,
         NpcManager::saelisId, 1, "player", "test"};
     NpcExecutionApproval approval{7, NpcManager::saelisId, 1,
-        actionCapability(HakuiActionCapability::NpcAttention), 0};
+        actionCapability(HakuiActionCapability::NpcAttention), 0,
+        HakuiActionSource::LocalSystem};
 
     NpcExecutionApproval missing = approval;
     missing.capabilities = 0;

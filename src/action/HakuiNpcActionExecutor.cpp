@@ -25,13 +25,13 @@ NpcExecutionResult HakuiNpcActionExecutor::execute(
 
     const std::uint64_t step = runtime.world().clock().step();
     const HakuiActionRequest request{
-        proposal.id, HakuiActionSource::Cortex,
+        proposal.id, approval.source,
         HakuiActionVerb::NpcObservePlayer,
         static_cast<std::uint32_t>(proposal.actorId),
         HakuiSnapshot::schemaVersion, step
     };
     const HakuiActionGrant grant{
-        HakuiActionSource::Cortex,
+        approval.source,
         static_cast<std::uint32_t>(proposal.actorId),
         approval.capabilities, step, step
     };

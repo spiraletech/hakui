@@ -18,6 +18,7 @@ struct NpcExecutionApproval {
     std::uint64_t targetId = 0;
     HakuiActionCapabilityMask capabilities = 0;
     std::uint64_t worldStep = 0;
+    HakuiActionSource source = HakuiActionSource::LocalSystem;
 };
 
 struct NpcExecutionResult {

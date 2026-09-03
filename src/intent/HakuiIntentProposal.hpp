@@ -36,6 +36,13 @@ public:
         std::string_view cortexText,
         std::uint64_t firstProposalId = 1
     );
+
+    // Deterministic player-facing grammar. This recognizes a deliberately
+    // tiny natural command surface without exposing protocol syntax.
+    [[nodiscard]] static std::optional<IntentProposal> parsePlayerCommand(
+        std::string_view text,
+        std::uint64_t proposalId
+    );
 };
 
 [[nodiscard]] std::string_view intentVerbLabel(IntentVerb verb) noexcept;

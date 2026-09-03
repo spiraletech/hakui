@@ -19,5 +19,12 @@ int main()
         "HAKUI_PROPOSE Talk 0 1 no_actor\nHAKUI_PROPOSE WalkTo 2001 0 no_target");
     assert(invalid.proposals.empty());
     assert(invalid.rejected == 2);
+    const auto natural = IntentProposalParser::parsePlayerCommand(
+        "Saelis, please look at me!", 90);
+    assert(natural);
+    assert(natural->id == 90);
+    assert(natural->verb == IntentVerb::LookAt);
+    assert(!IntentProposalParser::parsePlayerCommand("look at me", 91));
+    assert(!IntentProposalParser::parsePlayerCommand("Saelis sit down", 92));
     return 0;
 }

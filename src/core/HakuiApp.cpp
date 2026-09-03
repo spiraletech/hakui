@@ -1420,7 +1420,10 @@ void HakuiApp::commitChatInput()
         hakui::SpiralPresence::defaultNearbyRadius,
         cortexStatus_
     );
-    const bool routeToCortex = presence.playerInRange;
+    const std::optional<hakui::intent::IntentProposal> naturalProposal =
+        hakui::intent::IntentProposalParser::parsePlayerCommand(
+            prompt, nextProposalId_);
+    const bool routeToCortex = presence.playerInRange && !naturalProposal;
 
     const hakui::social::ChatMessage* message = chat_.commitLocal(
         1,
@@ -1444,6 +1447,24 @@ void HakuiApp::commitChatInput()
         );
         if (routeToCortex) {
             beginCortexRequest(prompt);
+        } else if (naturalProposal) {
+            ++nextProposalId_;
+            const std::uint64_t step = world_.clock().step();
+            const hakui::NpcExecutionApproval approval{
+                naturalProposal->id, naturalProposal->actorId,
+                naturalProposal->targetId,
+                hakui::actionCapability(hakui::HakuiActionCapability::NpcAttention),
+                step, hakui::HakuiActionSource::LocalSystem};
+            const hakui::NpcExecutionResult result =
+                npcActionExecutor_.execute(runtime_, *naturalProposal, approval);
+            if (result.executed()) {
+                showInputStatus("SAELIS // LOOKING AT YOU", 3.0f);
+                recordObserverEvent("intent.player.executed", "Saelis look-at-player");
+                SDL_Log("[SAELIS] PLAYER INTENT // LOOK AT ME // EXECUTED");
+            } else {
+                showInputStatus("SAELIS // CANNOT LOOK RIGHT NOW", 3.0f);
+                recordObserverEvent("intent.player.denied", "Saelis look-at-player");
+            }
         }
     } else {
         recordObserverEvent("social.input", "empty chat input dismissed");
@@ -1584,7 +1605,8 @@ void HakuiApp::pollCortex()
                 const hakui::NpcExecutionApproval approval{
                     proposal.id, proposal.actorId, proposal.targetId,
                     hakui::actionCapability(
-                        hakui::HakuiActionCapability::NpcAttention), step};
+                    hakui::HakuiActionCapability::NpcAttention), step,
+                    hakui::HakuiActionSource::Cortex};
                 (void)npcActionExecutor_.execute(runtime_, proposal, approval);
             }
         }
