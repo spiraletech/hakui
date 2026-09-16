@@ -205,6 +205,29 @@ bool HakuiApp::boot()
     player_.z = room.spawnZ;
     player_.money = 250.0f;
 
+    const auto utf8Path = [](std::string_view text) {
+        return std::filesystem::path{std::u8string(text.begin(), text.end())};
+    };
+    std::filesystem::path homePath;
+    if (const char* overridePath = SDL_getenv("HAKUI_HOME_SAVE"); overridePath && *overridePath) {
+        homePath = utf8Path(overridePath);
+    } else {
+        char* pref = SDL_GetPrefPath("EtherTech", "HAKUI");
+        if (!pref) return false;
+        homePath = utf8Path(pref) / "home.snapshot";
+        SDL_free(pref);
+    }
+    auto openedHome = hakui::HomeSession::open(homePath, player_);
+    if (!openedHome) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[HOME] load failed: %s",
+                     openedHome.error().message.c_str());
+        return false; // A corrupt save is never silently replaced by a new world.
+    }
+    homeSession_ = std::move(openedHome).value();
+    SDL_Log("[HOME] player loaded // entity %llu // revision %llu",
+            static_cast<unsigned long long>(homeSession_->entity().value()),
+            static_cast<unsigned long long>(homeSession_->world().revision().value()));
+
     (void)audio_.init();
     int gamepadCount = 0;
     SDL_JoystickID* gamepads = SDL_GetGamepads(&gamepadCount);
@@ -2083,6 +2106,7 @@ void HakuiApp::update(float dt)
         spiral_.tick(dt);
         rideControls_.reset();
         rideControlFrame_ = {};
+        updateHome(dt);
         debugRenderer_.updateCamera(dt, player_);
         titleTimer_ += dt;
         if (titleTimer_ >= 0.10f) {
@@ -2417,6 +2441,7 @@ void HakuiApp::update(float dt)
         locomotion_.update(dt);
     }
 
+    updateHome(dt);
     debugRenderer_.updateCamera(dt, player_);
 
     titleTimer_ += dt;
@@ -2551,9 +2576,49 @@ bool HakuiApp::render()
     return SDL_SubmitGPUCommandBuffer(commands);
 }
 
+void HakuiApp::updateHome(float dt)
+{
+    homeCommitTimer_ += dt;
+    homeSaveTimer_ += dt;
+    if (homeCommitTimer_ >= 0.1f) {
+        homeCommitTimer_ = 0.0f;
+        const bool persist = homeSaveTimer_ >= 5.0f;
+        if (persist) homeSaveTimer_ = 0.0f;
+        checkpointHome(persist);
+    }
+}
+
+void HakuiApp::checkpointHome(bool persist)
+{
+    if (!homeSession_) return;
+    const auto committed = homeSession_->commit(player_);
+    if (!committed) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[HOME] movement rejected: %s",
+                     committed.error().message.c_str());
+        showInputStatus("Movement could not be saved", 4.0f);
+        const auto restored = homeSession_->reload(player_);
+        if (!restored) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[HOME] reload failed: %s",
+                         restored.error().message.c_str());
+            quitRequested_ = true;
+        }
+        return; // No stale retry or persistence after a refused update.
+    }
+    if (persist) {
+        const auto saved = homeSession_->save();
+        if (!saved) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[HOME] save failed: %s",
+                         saved.error().message.c_str());
+            showInputStatus("Could not save progress", 4.0f);
+        }
+    }
+}
+
 void HakuiApp::shutdown()
 {
     SDL_Log("[HAKUI] shutting down");
+    checkpointHome(true);
+    homeSession_.reset();
 
     if (window_) {
         (void)setCameraCapture(false);

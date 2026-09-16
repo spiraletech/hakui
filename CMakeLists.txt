@@ -23,6 +23,7 @@ include(cmake/HakuiInteraction.cmake)
 include(cmake/HakuiWitness.cmake)
 include(cmake/HakuiIntent.cmake)
 include(cmake/HakuiGameplay.cmake)
+include(cmake/HakuiHome.cmake)
 include(cmake/HakuiNpcExecutor.cmake)
 include(cmake/HakuiAdapter.cmake)
 include(cmake/HakuiCortex.cmake)
@@ -125,6 +126,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             hakui_avatar_rig
             hakui_interaction
             hakui_gameplay
+            hakui_home
             hakui_adapter
             hakui_cortex
             hakui_intent

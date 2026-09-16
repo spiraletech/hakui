@@ -94,3 +94,9 @@ See `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC routing,
 `docs/L13_INTENT_PROPOSALS.md` for the inert intent contract,
 `docs/L12_WITNESS.md` for self-observation, and
 `docs/L11_ACTION_GATE.md` for the permission and NPC embodiment boundary.
+
+## HOME persistent player bridge
+
+The native client now loads one HOME-owned player transform, commits movement,
+and restores the same entity after restart. See [HOME bridge](docs/HOME_BRIDGE.md)
+for save behavior, ownership boundaries and acceptance tests.
