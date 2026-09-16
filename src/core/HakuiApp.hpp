@@ -15,6 +15,7 @@
 #include "combat/CombatSimulation.hpp"
 #include "action/HakuiNpcActionExecutor.hpp"
 #include "core/GameRuntime.hpp"
+#include "home/HomeSession.hpp"
 #include "games/GameTerminal.hpp"
 #include "interaction/InteractionService.hpp"
 #include "input/SdlInputBridge.hpp"
@@ -42,6 +43,8 @@ private:
         std::optional<hakui::SpiralCortexReply> reply;
     };
 
+    void updateHome(float dt);
+    void checkpointHome(bool persist);
     bool initPlatform();
     bool initGPU();
     void initSpiralCore();
@@ -102,6 +105,9 @@ private:
     // compatibility references preserve the existing native client while
     // keeping all deterministic state rooted below GameRuntime.
     hakui::GameRuntime runtime_{};
+    std::unique_ptr<hakui::HomeSession> homeSession_;
+    float homeCommitTimer_ = 0.0f;
+    float homeSaveTimer_ = 0.0f;
     hakui::HakuiWorldState& world_ = runtime_.world();
     hakui::BlackRoom& blackRoom_ = runtime_.blackRoom();
     PlayerState& player_ = runtime_.player();
