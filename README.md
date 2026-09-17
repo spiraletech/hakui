@@ -4,20 +4,20 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L17**. HAKUI now has a deterministic character registry
-on top of L16's immutable identity canon. Agnathos, Saelis, and The Reaper exist
-simultaneously as stable runtime instances with unique persistent instance IDs
-and explicit spawn/despawn lifecycle. Agnathos is bound to the authoritative
-player, Saelis to the current authored NPC, and The Reaper is a live unbound
-presence awaiting non-human skeletal embodiment in L18. The existing L15 natural
-chat command **“Saelis, come here”** still routes her around furniture, stops her
-at a social distance, and turns her toward the player.
+Current vertical layer: **L18**. HAKUI now has explicit character embodiment canon
+on top of L16 identity and L17 runtime presence. Agnathos resolves to the humanoid
+rig with Raster Veil presentation, Saelis resolves to the humanoid rig with her
+synthetic presentation, and The Reaper resolves to a dedicated non-human skeletal
+rig with skull/jaw/hood/cloak/chain anchors and no human face or hair slots. All
+three remain stable runtime character instances. The existing L15 natural chat
+command **“Saelis, come here”** still routes her around furniture, stops her at a
+social distance, and turns her toward the player.
 
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
 
-The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are now runtime body profiles on one HAKUI skeleton and one gameplay simulation.
+The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles.
 
 ```text
 HAKUI.exe
@@ -27,13 +27,18 @@ HAKUI.exe
    +-- shared combat
    +-- shared skateboard / BMX
    +-- shared seating / interaction / chat
-   +-- shared AvatarRig
-          |
-          +-- MaleBodyProfile
-          `-- FemaleBodyProfile
+   +-- Character Registry
+   |      +-- Agnathos
+   |      +-- Saelis
+   |      `-- The Reaper
+   +-- AvatarRig
+          +-- Humanoid
+          |    +-- MaleBodyProfile
+          |    `-- FemaleBodyProfile
+          `-- ReaperSkeleton
 ```
 
-Runtime embodiment controls:
+Runtime embodiment controls for the humanoid debug avatar remain:
 
 - default profile: `male`
 - `F6`: toggle male/female without restarting the world
@@ -84,16 +89,19 @@ HakuiAdapter
    |
  HAKUI
    |
-AvatarRig
- |- MaleBodyProfile
- `- FemaleBodyProfile
+Character Registry
+   |
+Character Embodiment
+ |- Humanoid / body profile
+ `- Reaper skeletal rig
 ```
 
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L17_CHARACTER_REGISTRY.md` for runtime character instance and lifecycle
+See `docs/L18_CHARACTER_EMBODIMENT.md` for character rig and presentation rules,
+`docs/L17_CHARACTER_REGISTRY.md` for runtime character instance and lifecycle
 rules, `docs/L16_CHARACTER_IDENTITY.md` for canonical character IDs,
 `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC routing,
 `docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
