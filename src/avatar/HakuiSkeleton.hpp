@@ -7,6 +7,12 @@
 
 #include "avatar/AvatarAttachment.hpp"
 
+enum class HakuiSkeletonArchetype {
+    None,
+    Humanoid,
+    ReaperSkeleton
+};
+
 struct HakuiBoneDefinition {
     std::string name;
     int parent = -1;
@@ -20,9 +26,11 @@ struct HakuiBoneDefinition {
 class HakuiSkeleton {
 public:
     bool buildDefaultHumanoid();
+    bool buildReaperSkeleton();
 
     std::size_t boneCount() const noexcept;
     bool ready() const noexcept;
+    HakuiSkeletonArchetype archetype() const noexcept;
 
     const std::vector<HakuiBoneDefinition>& bones() const noexcept;
     const std::vector<AvatarAttachment>& attachmentSlots() const noexcept;
@@ -33,6 +41,7 @@ private:
     int addBone(std::string name, int parent);
 
 private:
+    HakuiSkeletonArchetype archetype_ = HakuiSkeletonArchetype::None;
     std::vector<HakuiBoneDefinition> bones_;
     std::vector<AvatarAttachment> attachments_;
 };

@@ -17,7 +17,13 @@ enum class AttachmentCategory {
     RightFoot,
     Skateboard,
     BMX,
-    VehicleSeat
+    VehicleSeat,
+    Skull,
+    Jaw,
+    Hood,
+    Cloak,
+    Chain,
+    Weapon
 };
 
 struct AvatarAttachment {

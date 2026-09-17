@@ -1,6 +1,7 @@
 #pragma once
 
 #include "action/HakuiActionGate.hpp"
+#include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
 #include "character/CharacterRegistry.hpp"
 #include "interaction/InteractionRegistry.hpp"
@@ -17,8 +18,9 @@ namespace hakui {
 // residents and interaction membership each have one owner while platform
 // input, rendering, audio, chat, combat and Spiral orchestration remain outside
 // this class. L16 adds immutable character identity references. L17 adds a
-// fixed-budget character registry for stable instance identity and lifecycle
-// without moving mutable physical state out of player/NPC authorities.
+// fixed-budget character registry for stable instance identity and lifecycle.
+// L18 adds immutable embodiment profiles without moving physical simulation
+// ownership out of player/NPC authorities.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -57,12 +59,33 @@ public:
         return character::canonicalIdentity(player_.state().characterId);
     }
 
+    [[nodiscard]] const character::CharacterEmbodimentProfile* playerEmbodiment() const noexcept
+    {
+        return character::canonicalEmbodiment(player_.state().characterId);
+    }
+
     [[nodiscard]] const character::CharacterIdentity* npcIdentity(
         std::uint32_t npcId
     ) const noexcept
     {
         const NpcState* npc = npcs_.find(npcId);
         return npc ? character::canonicalIdentity(npc->characterId) : nullptr;
+    }
+
+    [[nodiscard]] const character::CharacterEmbodimentProfile* npcEmbodiment(
+        std::uint32_t npcId
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return npc ? character::canonicalEmbodiment(npc->characterId) : nullptr;
+    }
+
+    [[nodiscard]] const character::CharacterEmbodimentProfile* characterEmbodiment(
+        character::CharacterInstanceId instanceId
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return instance ? character::canonicalEmbodiment(instance->characterId) : nullptr;
     }
 
     [[nodiscard]] character::CharacterInstance* playerCharacterInstance() noexcept
@@ -91,9 +114,6 @@ public:
         return npc ? characters_.find(npc->characterId) : nullptr;
     }
 
-    // Compatibility accessors for the existing native-client call sites.
-    // These delegate into explicit authority roots rather than exposing
-    // duplicate state.
     BlackRoom& blackRoom() noexcept { return world_.blackRoom(); }
     const BlackRoom& blackRoom() const noexcept { return world_.blackRoom(); }
 
@@ -106,9 +126,6 @@ public:
     RideableMovementController& rideable() noexcept { return player_.rideable(); }
     const RideableMovementController& rideable() const noexcept { return player_.rideable(); }
 
-    // Advance one accepted deterministic simulation delta. NPCs tick only when
-    // the canonical world clock accepts the delta, so invalid/overflow deltas
-    // cannot mutate resident state while leaving world time unchanged.
     void advanceWorld(float deltaSeconds) noexcept
     {
         const std::uint64_t beforeStep = world_.clock().step();
@@ -118,18 +135,12 @@ public:
         }
     }
 
-    // Reset only player/ride state against the current authored world. Character
-    // lifecycle is intentionally preserved; a movement reset is not a spawn.
     void resetPlayerToSpawn(float startingMoney = 250.0f) noexcept
     {
         player_.resetToSpawn(world_.blackRoom().movementEnvironment(), startingMoney);
         player_.state().characterId = character::CharacterId::Agnathos;
     }
 
-    // Full deterministic gameplay reset. Interaction membership intentionally
-    // remains separate: live world objects keep their registered endpoints
-    // unless their owner explicitly unregisters or destroys them. The authored
-    // L17 roster is restored with the same stable CharacterInstanceIds.
     void resetSession(float startingMoney = 250.0f) noexcept
     {
         world_.reset();
@@ -142,7 +153,7 @@ public:
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, and character roster reset"
+            "authoritative world, player, NPC, character roster, and embodiment bindings reset"
         );
     }
 
