@@ -110,7 +110,10 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
         src/audio/HakuiAudio.hpp
         src/avatar/HakuiSkeleton.hpp
         src/avatar/AvatarAttachment.hpp
-        src/render/DebugWorldRenderer.cpp
+        src/character/CharacterRenderProfile.hpp
+        src/character/NeeshegoRenderExecution.hpp
+        src/render/NeeshegoDebugWorldRenderer.cpp
+        src/render/NeeshegoRenderPass.hpp
         src/render/DebugWorldRenderer.hpp
         src/render/Math3D.hpp
         src/player/PlayerState.hpp

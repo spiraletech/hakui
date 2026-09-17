@@ -33,6 +33,8 @@ add_library(hakui_gameplay STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterIdentity.hpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterRegistry.hpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterEmbodiment.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterRenderProfile.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/character/NeeshegoRenderExecution.hpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/navigation/HakuiNavigation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/PlayerMovementController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/RideableMovementController.cpp
@@ -110,6 +112,10 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/CharacterEmbodimentSpec.cpp
     )
 
+    add_executable(hakui_neeshego_render_execution_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/NeeshegoRenderExecutionSpec.cpp
+    )
+
     target_compile_features(hakui_gameplay_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_gameplay_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_rideable_spec PRIVATE cxx_std_20)
@@ -134,6 +140,8 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
     target_link_libraries(hakui_character_registry_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_character_embodiment_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_character_embodiment_spec PRIVATE hakui_gameplay)
+    target_compile_features(hakui_neeshego_render_execution_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_neeshego_render_execution_spec PRIVATE hakui_gameplay)
 
     if(MSVC)
         target_compile_options(hakui_gameplay_spec PRIVATE /W4 /permissive- /UNDEBUG)
@@ -148,6 +156,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_character_identity_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_character_registry_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_character_embodiment_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        target_compile_options(hakui_neeshego_render_execution_spec PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(hakui_gameplay_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
@@ -161,6 +170,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_character_identity_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_character_registry_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_character_embodiment_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        target_compile_options(hakui_neeshego_render_execution_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
     if(BUILD_TESTING)
@@ -176,5 +186,6 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         add_test(NAME hakui.character_identity COMMAND hakui_character_identity_spec)
         add_test(NAME hakui.character_registry COMMAND hakui_character_registry_spec)
         add_test(NAME hakui.character_embodiment COMMAND hakui_character_embodiment_spec)
+        add_test(NAME hakui.neeshego_render_execution COMMAND hakui_neeshego_render_execution_spec)
     endif()
 endif()

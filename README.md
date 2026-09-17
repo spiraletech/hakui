@@ -4,20 +4,13 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L19**. HAKUI now has deterministic Neeshego manga render
-canon on top of L16 identity, L17 runtime presence, and L18 embodiment. Agnathos
-resolves to scanline-dominant Raster Veil, Saelis to synthetic halftone ink, and
-The Reaper to xerox-crush skeletal presentation. All three are monochrome-only
-profiles and can deterministically compose exploration, dialogue, combat windup,
-combat impact, realm-shift, and overload frame treatments. The existing L15
-natural chat command **“Saelis, come here”** still routes her around furniture,
-stops her at a social distance, and turns her toward the player.
+Current vertical layer: **L20**. HAKUI now executes the Neeshego manga render grammar in the native SDL GPU client. Agnathos runs through scanline-dominant Raster Veil execution, Saelis through cleaner synthetic monochrome treatment, and The Reaper through xerox-crush execution. Exploration, dialogue, combat windup, combat impact, realm-shift preview, and overload preview all resolve through the L19 frame canon into bounded L20 draw parameters. The existing L15 natural chat command **“Saelis, come here”** still routes her around furniture, stops her at a social distance, and turns her toward the player.
 
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
 
-The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles. L19 adds presentation grammar without making rendering authoritative over gameplay.
+The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles. L19 defines presentation grammar without making rendering authoritative over gameplay. L20 executes that grammar in the native renderer while preserving the same authority boundary.
 
 ```text
 HAKUI.exe
@@ -34,10 +27,15 @@ HAKUI.exe
    +-- Character Embodiment
    |      +-- Humanoid / body profile
    |      `-- Reaper skeletal rig
-   `-- Neeshego Render Grammar
-          +-- Raster Veil
-          +-- Synthetic Ink
-          `-- Xerox Crush
+   +-- Neeshego Render Grammar
+   |      +-- Raster Veil
+   |      +-- Synthetic Ink
+   |      `-- Xerox Crush
+   `-- Neeshego Render Execution
+          +-- monochrome palette remap
+          +-- scanline / halftone / xerox overlays
+          +-- portrait / impact / realm framing
+          `-- speed lines / tear bands / impact flash
 ```
 
 Runtime embodiment controls for the humanoid debug avatar remain:
@@ -47,7 +45,14 @@ Runtime embodiment controls for the humanoid debug avatar remain:
 - startup override: `HAKUI_BODY_PROFILE=male|female`
 - canonical state key: `avatar.body_profile`
 
-The dedicated Mannequin Lab remains an isolated rig-science surface. It does not own gameplay authority.
+Developer-only L20 visual QA overrides:
+
+- `HAKUI_NEESHEGO_PROFILE=agnathos|saelis|reaper`
+- `HAKUI_NEESHEGO_EVENT=exploration|dialogue|windup|impact|realm|overload`
+
+Without those overrides, the main client follows the canonical player character and live HAKUI scene state.
+
+The dedicated Mannequin Lab remains an isolated rig-science surface. It compiles the unmodified debug renderer and does not inherit the game-only Neeshego execution pass.
 
 ## Canonicalization source
 
@@ -96,13 +101,16 @@ Character Registry
 Character Embodiment
    |
 Neeshego Manga Render Grammar
+   |
+Neeshego Native Render Execution
 ```
 
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar and frame
+See `docs/L20_RENDER_EXECUTION.md` for native manga execution and visual-QA rules,
+`docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar and frame
 composition rules, `docs/L18_CHARACTER_EMBODIMENT.md` for character rig and
 presentation rules, `docs/L17_CHARACTER_REGISTRY.md` for runtime character
 instance and lifecycle rules, `docs/L16_CHARACTER_IDENTITY.md` for canonical
