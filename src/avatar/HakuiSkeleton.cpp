@@ -6,6 +6,7 @@ bool HakuiSkeleton::buildDefaultHumanoid()
 {
     bones_.clear();
     attachments_.clear();
+    archetype_ = HakuiSkeletonArchetype::Humanoid;
 
     const int root      = addBone("Root", -1);
     const int pelvis    = addBone("Pelvis", root);
@@ -60,6 +61,71 @@ bool HakuiSkeleton::buildDefaultHumanoid()
     return true;
 }
 
+bool HakuiSkeleton::buildReaperSkeleton()
+{
+    bones_.clear();
+    attachments_.clear();
+    archetype_ = HakuiSkeletonArchetype::ReaperSkeleton;
+
+    const int root      = addBone("Root", -1);
+    const int pelvis    = addBone("Pelvis", root);
+    const int spine01   = addBone("Spine.01", pelvis);
+    const int spine02   = addBone("Spine.02", spine01);
+    const int ribCage   = addBone("RibCage", spine02);
+    const int neck      = addBone("Neck", ribCage);
+    const int skull     = addBone("Skull", neck);
+    const int jaw       = addBone("Jaw", skull);
+
+    const int clavicleL = addBone("Clavicle.L", ribCage);
+    const int upperArmL = addBone("UpperArm.L", clavicleL);
+    const int lowerArmL = addBone("LowerArm.L", upperArmL);
+    const int handL     = addBone("Hand.L", lowerArmL);
+
+    const int clavicleR = addBone("Clavicle.R", ribCage);
+    const int upperArmR = addBone("UpperArm.R", clavicleR);
+    const int lowerArmR = addBone("LowerArm.R", upperArmR);
+    const int handR     = addBone("Hand.R", lowerArmR);
+
+    const int thighL = addBone("Thigh.L", pelvis);
+    const int shinL  = addBone("Shin.L", thighL);
+    const int ankleL = addBone("Ankle.L", shinL);
+    const int footL  = addBone("Foot.L", ankleL);
+
+    const int thighR = addBone("Thigh.R", pelvis);
+    const int shinR  = addBone("Shin.R", thighR);
+    const int ankleR = addBone("Ankle.R", shinR);
+    const int footR  = addBone("Foot.R", ankleR);
+
+    const int hoodAnchor  = addBone("HoodAnchor", skull);
+    const int cloakAnchor = addBone("CloakAnchor", ribCage);
+    const int chainAnchor = addBone("ChainAnchor", clavicleR);
+
+    (void)jaw;
+    (void)handL;
+    (void)handR;
+    (void)footL;
+    (void)footR;
+    (void)hoodAnchor;
+    (void)cloakAnchor;
+    (void)chainAnchor;
+
+    attachments_ = {
+        {"skeleton",      "Pelvis",      AttachmentCategory::Body},
+        {"skull",         "Skull",       AttachmentCategory::Skull},
+        {"jaw",           "Jaw",         AttachmentCategory::Jaw},
+        {"hood",          "HoodAnchor",  AttachmentCategory::Hood},
+        {"cloak",         "CloakAnchor", AttachmentCategory::Cloak},
+        {"chain",         "ChainAnchor", AttachmentCategory::Chain},
+        {"weapon",        "Hand.R",      AttachmentCategory::Weapon},
+        {"hand.left",     "Hand.L",      AttachmentCategory::LeftHand},
+        {"hand.right",    "Hand.R",      AttachmentCategory::RightHand},
+        {"foot.left",     "Foot.L",      AttachmentCategory::LeftFoot},
+        {"foot.right",    "Foot.R",      AttachmentCategory::RightFoot}
+    };
+
+    return true;
+}
+
 std::size_t HakuiSkeleton::boneCount() const noexcept
 {
     return bones_.size();
@@ -68,6 +134,11 @@ std::size_t HakuiSkeleton::boneCount() const noexcept
 bool HakuiSkeleton::ready() const noexcept
 {
     return !bones_.empty();
+}
+
+HakuiSkeletonArchetype HakuiSkeleton::archetype() const noexcept
+{
+    return archetype_;
 }
 
 const std::vector<HakuiBoneDefinition>& HakuiSkeleton::bones() const noexcept
