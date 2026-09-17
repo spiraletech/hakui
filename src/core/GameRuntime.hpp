@@ -1,6 +1,7 @@
 #pragma once
 
 #include "action/HakuiActionGate.hpp"
+#include "character/CharacterActorAuthority.hpp"
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
 #include "character/CharacterPerformanceProfile.hpp"
@@ -27,12 +28,15 @@ namespace hakui {
 // presentation-resource ownership into gameplay state. L21 adds immutable
 // character performance canon. L22 resolves those authored samples into
 // rig-space pose channels without taking root-motion or transform authority.
+// L23 adds independent character-actor authority for spawned canonical cast
+// members that are intentionally not PlayerRuntime or NpcManager entities.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
         : characters_(NpcManager::saelisId)
     {
         bindCanonicalCharacters();
+        resetIndependentCharacterActors();
     }
     GameRuntime(const GameRuntime&) = delete;
     GameRuntime& operator=(const GameRuntime&) = delete;
@@ -50,6 +54,16 @@ public:
 
     character::CharacterRegistry& characters() noexcept { return characters_; }
     const character::CharacterRegistry& characters() const noexcept { return characters_; }
+
+    character::CharacterActorAuthority& characterActors() noexcept
+    {
+        return characterActors_;
+    }
+
+    const character::CharacterActorAuthority& characterActors() const noexcept
+    {
+        return characterActors_;
+    }
 
     HakuiActionGate& actionGate() noexcept { return actionGate_; }
     const HakuiActionGate& actionGate() const noexcept { return actionGate_; }
@@ -259,6 +273,44 @@ public:
         return npc ? characters_.find(npc->characterId) : nullptr;
     }
 
+    [[nodiscard]] character::CharacterActorState* independentCharacterActor(
+        character::CharacterId characterId
+    ) noexcept
+    {
+        return characterActors_.find(characterId);
+    }
+
+    [[nodiscard]] const character::CharacterActorState* independentCharacterActor(
+        character::CharacterId characterId
+    ) const noexcept
+    {
+        return characterActors_.find(characterId);
+    }
+
+    [[nodiscard]] const character::CharacterActorState* independentCharacterActor(
+        character::CharacterInstanceId instanceId
+    ) const noexcept
+    {
+        return characterActors_.find(instanceId);
+    }
+
+    bool requestIndependentCharacterWalkTo(
+        character::CharacterId characterId,
+        float x,
+        float y,
+        float z
+    ) noexcept
+    {
+        return characterActors_.requestWalkTo(characterId, x, y, z);
+    }
+
+    [[nodiscard]] bool independentCharacterInInteractionRange(
+        character::CharacterId characterId
+    ) const noexcept
+    {
+        return characterActors_.canInteract(characterId);
+    }
+
     BlackRoom& blackRoom() noexcept { return world_.blackRoom(); }
     const BlackRoom& blackRoom() const noexcept { return world_.blackRoom(); }
 
@@ -277,6 +329,12 @@ public:
         world_.advance(deltaSeconds);
         if (world_.clock().step() != beforeStep) {
             npcs_.tick(world_.blackRoom(), player_.state(), deltaSeconds);
+            characterActors_.tick(
+                player_.state().x,
+                player_.state().y,
+                player_.state().z,
+                deltaSeconds
+            );
         }
     }
 
@@ -293,12 +351,13 @@ public:
         npcs_.reset(world_.blackRoom());
         bindCanonicalCharacters();
         characters_.resetCanonicalRoster(NpcManager::saelisId);
+        resetIndependentCharacterActors();
         witness_.observed(
             world_.clock().step(),
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, embodiment, render, performance, and pose canon reset"
+            "authoritative world, player, NPC, character roster, independent actor, embodiment, render, performance, and pose canon reset"
         );
     }
 
@@ -311,10 +370,26 @@ private:
         }
     }
 
+    void resetIndependentCharacterActors() noexcept
+    {
+        const MovementEnvironment environment =
+            world_.blackRoom().movementEnvironment();
+        characterActors_.reset(
+            environment.spawnX,
+            environment.spawnY,
+            environment.spawnZ,
+            BlackRoom::floorMinimumX,
+            BlackRoom::floorMaximumX,
+            BlackRoom::floorMinimumZ,
+            BlackRoom::floorMaximumZ
+        );
+    }
+
     HakuiWorldState world_{};
     PlayerRuntime player_{};
     NpcManager npcs_{};
     character::CharacterRegistry characters_;
+    character::CharacterActorAuthority characterActors_{};
     HakuiActionGate actionGate_{};
     witness::HakuiWitness witness_{256};
     InteractionRegistry interactions_{};
