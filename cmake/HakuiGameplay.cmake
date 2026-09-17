@@ -31,6 +31,7 @@ hakui_enforce_first_party_firewall(
 add_library(hakui_gameplay STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../src/action/HakuiActionGate.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterIdentity.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/character/CharacterRegistry.hpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/navigation/HakuiNavigation.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/PlayerMovementController.cpp
     ${CMAKE_CURRENT_LIST_DIR}/../src/player/RideableMovementController.cpp
@@ -100,6 +101,10 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/CharacterIdentitySpec.cpp
     )
 
+    add_executable(hakui_character_registry_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/CharacterRegistrySpec.cpp
+    )
+
     target_compile_features(hakui_gameplay_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_gameplay_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_rideable_spec PRIVATE cxx_std_20)
@@ -120,6 +125,8 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
     target_link_libraries(hakui_navigation_spec PRIVATE hakui_gameplay)
     target_compile_features(hakui_character_identity_spec PRIVATE cxx_std_20)
     target_link_libraries(hakui_character_identity_spec PRIVATE hakui_gameplay)
+    target_compile_features(hakui_character_registry_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_character_registry_spec PRIVATE hakui_gameplay)
 
     if(MSVC)
         target_compile_options(hakui_gameplay_spec PRIVATE /W4 /permissive- /UNDEBUG)
@@ -132,6 +139,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_action_gate_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_navigation_spec PRIVATE /W4 /permissive- /UNDEBUG)
         target_compile_options(hakui_character_identity_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        target_compile_options(hakui_character_registry_spec PRIVATE /W4 /permissive- /UNDEBUG)
     else()
         target_compile_options(hakui_gameplay_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_rideable_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
@@ -143,6 +151,7 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         target_compile_options(hakui_action_gate_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_navigation_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
         target_compile_options(hakui_character_identity_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        target_compile_options(hakui_character_registry_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
     if(BUILD_TESTING)
@@ -156,5 +165,6 @@ if(HAKUI_ENABLE_GAMEPLAY_SPECS)
         add_test(NAME hakui.action_gate COMMAND hakui_action_gate_spec)
         add_test(NAME hakui.navigation COMMAND hakui_navigation_spec)
         add_test(NAME hakui.character_identity COMMAND hakui_character_identity_spec)
+        add_test(NAME hakui.character_registry COMMAND hakui_character_registry_spec)
     endif()
 endif()

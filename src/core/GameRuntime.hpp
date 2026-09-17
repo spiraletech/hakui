@@ -2,6 +2,7 @@
 
 #include "action/HakuiActionGate.hpp"
 #include "character/CharacterIdentity.hpp"
+#include "character/CharacterRegistry.hpp"
 #include "interaction/InteractionRegistry.hpp"
 #include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
@@ -15,11 +16,13 @@ namespace hakui {
 // L10 extends the L5 split with an explicit NPC authority. World, player,
 // residents and interaction membership each have one owner while platform
 // input, rendering, audio, chat, combat and Spiral orchestration remain outside
-// this class. L16 adds immutable character identity references without moving
-// mutable gameplay state out of those established authorities.
+// this class. L16 adds immutable character identity references. L17 adds a
+// fixed-budget character registry for stable instance identity and lifecycle
+// without moving mutable physical state out of player/NPC authorities.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
+        : characters_(NpcManager::saelisId)
     {
         bindCanonicalCharacters();
     }
@@ -36,6 +39,9 @@ public:
 
     NpcManager& npcs() noexcept { return npcs_; }
     const NpcManager& npcs() const noexcept { return npcs_; }
+
+    character::CharacterRegistry& characters() noexcept { return characters_; }
+    const character::CharacterRegistry& characters() const noexcept { return characters_; }
 
     HakuiActionGate& actionGate() noexcept { return actionGate_; }
     const HakuiActionGate& actionGate() const noexcept { return actionGate_; }
@@ -57,6 +63,32 @@ public:
     {
         const NpcState* npc = npcs_.find(npcId);
         return npc ? character::canonicalIdentity(npc->characterId) : nullptr;
+    }
+
+    [[nodiscard]] character::CharacterInstance* playerCharacterInstance() noexcept
+    {
+        return characters_.find(player_.state().characterId);
+    }
+
+    [[nodiscard]] const character::CharacterInstance* playerCharacterInstance() const noexcept
+    {
+        return characters_.find(player_.state().characterId);
+    }
+
+    [[nodiscard]] character::CharacterInstance* npcCharacterInstance(
+        std::uint32_t npcId
+    ) noexcept
+    {
+        NpcState* npc = npcs_.find(npcId);
+        return npc ? characters_.find(npc->characterId) : nullptr;
+    }
+
+    [[nodiscard]] const character::CharacterInstance* npcCharacterInstance(
+        std::uint32_t npcId
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return npc ? characters_.find(npc->characterId) : nullptr;
     }
 
     // Compatibility accessors for the existing native-client call sites.
@@ -86,7 +118,8 @@ public:
         }
     }
 
-    // Reset only player/ride state against the current authored world.
+    // Reset only player/ride state against the current authored world. Character
+    // lifecycle is intentionally preserved; a movement reset is not a spawn.
     void resetPlayerToSpawn(float startingMoney = 250.0f) noexcept
     {
         player_.resetToSpawn(world_.blackRoom().movementEnvironment(), startingMoney);
@@ -95,19 +128,21 @@ public:
 
     // Full deterministic gameplay reset. Interaction membership intentionally
     // remains separate: live world objects keep their registered endpoints
-    // unless their owner explicitly unregisters or destroys them.
+    // unless their owner explicitly unregisters or destroys them. The authored
+    // L17 roster is restored with the same stable CharacterInstanceIds.
     void resetSession(float startingMoney = 250.0f) noexcept
     {
         world_.reset();
         resetPlayerToSpawn(startingMoney);
         npcs_.reset(world_.blackRoom());
         bindCanonicalCharacters();
+        characters_.resetCanonicalRoster(NpcManager::saelisId);
         witness_.observed(
             world_.clock().step(),
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, and character bindings reset"
+            "authoritative world, player, NPC, and character roster reset"
         );
     }
 
@@ -123,6 +158,7 @@ private:
     HakuiWorldState world_{};
     PlayerRuntime player_{};
     NpcManager npcs_{};
+    character::CharacterRegistry characters_;
     HakuiActionGate actionGate_{};
     witness::HakuiWitness witness_{256};
     InteractionRegistry interactions_{};
