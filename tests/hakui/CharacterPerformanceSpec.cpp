@@ -1,4 +1,5 @@
 #include "character/CharacterPerformanceProfile.hpp"
+#include "character/CharacterPoseExecutor.hpp"
 #include "core/GameRuntime.hpp"
 
 #include <cassert>
@@ -74,6 +75,61 @@ int main()
     assert(performanceEventFor(MangaRenderEvent::Overload) ==
            CharacterPerformanceEvent::Overload);
 
+    // L22: authored performance now resolves into actual rig-space channels.
+    const CharacterPoseExecution agnathosPose = executeCharacterPerformance(
+        agnathosDialogue,
+        0.25f
+    );
+    assert(agnathosPose.active);
+    assert(agnathosPose.rig == CharacterRigArchetype::Humanoid);
+    assert(!agnathosPose.skeletalOnly);
+    assert(agnathosPose.usesHumanFacialMuscles);
+    assert(agnathosPose.usesRasterEyeChannel);
+    assert(agnathosPose.rasterEyeWeight > 0.60f);
+    assert(findPoseChannel(agnathosPose, PoseJoint::Neck) != nullptr);
+    assert(findPoseChannel(agnathosPose, PoseJoint::Skull) != nullptr);
+    assert(findPoseChannel(agnathosPose, PoseJoint::Hood) == nullptr);
+
+    const CharacterPoseExecution saelisPose = executeCharacterPerformance(
+        saelisDialogue,
+        0.25f
+    );
+    assert(saelisPose.active);
+    assert(saelisPose.rig == CharacterRigArchetype::Humanoid);
+    assert(saelisPose.usesHumanFacialMuscles);
+    assert(!saelisPose.usesRasterEyeChannel);
+    assert(findPoseChannel(saelisPose, PoseJoint::SpineUpper) != nullptr);
+
+    const CharacterPoseExecution reaperPose = executeCharacterPerformance(
+        reaperOverload,
+        0.10f
+    );
+    assert(reaperPose.active);
+    assert(reaperPose.rig == CharacterRigArchetype::ReaperSkeleton);
+    assert(reaperPose.skeletalOnly);
+    assert(!reaperPose.usesHumanFacialMuscles);
+    assert(!reaperPose.usesRasterEyeChannel);
+    assert(reaperPose.jawOpen == 1.0f);
+    assert(findPoseChannel(reaperPose, PoseJoint::Skull) != nullptr);
+    assert(findPoseChannel(reaperPose, PoseJoint::Jaw) != nullptr);
+    assert(findPoseChannel(reaperPose, PoseJoint::Hood) != nullptr);
+    assert(findPoseChannel(reaperPose, PoseJoint::Cloak) != nullptr);
+
+    const PoseChannel* reaperJaw = findPoseChannel(reaperPose, PoseJoint::Jaw);
+    assert(reaperJaw != nullptr);
+    assert(reaperJaw->pitch > 0.40f);
+
+    // Held-frame discontinuity is deterministic and visibly different from
+    // smooth humanoid performance sampling.
+    const CharacterPoseExecution reaperPoseLater = executeCharacterPerformance(
+        reaperOverload,
+        0.20f
+    );
+    const PoseChannel* skullA = findPoseChannel(reaperPose, PoseJoint::Skull);
+    const PoseChannel* skullB = findPoseChannel(reaperPoseLater, PoseJoint::Skull);
+    assert(skullA != nullptr && skullB != nullptr);
+    assert(skullA->yaw != skullB->yaw);
+
     hakui::GameRuntime runtime;
     assert(runtime.playerPerformanceProfile() == agnathos);
     assert(runtime.npcPerformanceProfile(hakui::NpcManager::saelisId) == saelis);
@@ -92,6 +148,28 @@ int main()
     assert(runtimeReaper.characterId == CharacterId::Reaper);
     assert(runtimeReaper.motion == CharacterMotionGrammar::ReaperStaccato);
     assert(runtimeReaper.staccatoWeight == 1.0f);
+
+    const CharacterPoseExecution runtimePlayerPose = runtime.playerPoseExecution(
+        CharacterPerformanceEvent::Dialogue,
+        0.25f
+    );
+    assert(runtimePlayerPose.characterId == CharacterId::Agnathos);
+    assert(runtimePlayerPose.rig == CharacterRigArchetype::Humanoid);
+
+    const CharacterPoseExecution runtimeSaelisPose = runtime.npcPoseExecution(
+        hakui::NpcManager::saelisId,
+        CharacterPerformanceEvent::Dialogue,
+        0.25f
+    );
+    assert(runtimeSaelisPose.characterId == CharacterId::Saelis);
+
+    const CharacterPoseExecution runtimeReaperPose = runtime.characterPoseExecution(
+        reaperInstanceId,
+        CharacterPerformanceEvent::Overload,
+        0.10f
+    );
+    assert(runtimeReaperPose.characterId == CharacterId::Reaper);
+    assert(runtimeReaperPose.skeletalOnly);
 
     runtime.resetSession();
     assert(runtime.playerPerformanceProfile() == agnathos);
