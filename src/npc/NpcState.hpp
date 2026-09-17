@@ -6,6 +6,7 @@
 #include <string>
 
 #include "avatar/BodyProfile.hpp"
+#include "character/CharacterIdentity.hpp"
 
 namespace hakui {
 
@@ -49,6 +50,7 @@ struct NpcNavigationPoint { float x = 0.0f; float z = 0.0f; };
 // this state later, but it does not own these values or the routine clock.
 struct NpcState {
     std::uint32_t id = 0;
+    character::CharacterId characterId = character::CharacterId::None;
     std::string displayName;
     avatar::BodyProfileId bodyProfile = avatar::BodyProfileId::Female;
 
