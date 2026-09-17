@@ -4,6 +4,7 @@
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
 #include "character/CharacterRegistry.hpp"
+#include "character/CharacterRenderProfile.hpp"
 #include "interaction/InteractionRegistry.hpp"
 #include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
@@ -19,8 +20,9 @@ namespace hakui {
 // input, rendering, audio, chat, combat and Spiral orchestration remain outside
 // this class. L16 adds immutable character identity references. L17 adds a
 // fixed-budget character registry for stable instance identity and lifecycle.
-// L18 adds immutable embodiment profiles without moving physical simulation
-// ownership out of player/NPC authorities.
+// L18 adds immutable embodiment profiles. L19 adds immutable manga render
+// grammar plus deterministic frame-treatment composition without moving GPU or
+// presentation-resource ownership into gameplay state.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -64,6 +66,18 @@ public:
         return character::canonicalEmbodiment(player_.state().characterId);
     }
 
+    [[nodiscard]] const character::CharacterRenderProfile* playerRenderProfile() const noexcept
+    {
+        return character::canonicalRenderProfile(player_.state().characterId);
+    }
+
+    [[nodiscard]] character::MangaFrameTreatment playerMangaFrame(
+        character::MangaRenderEvent event
+    ) const noexcept
+    {
+        return character::composeMangaFrame(player_.state().characterId, event);
+    }
+
     [[nodiscard]] const character::CharacterIdentity* npcIdentity(
         std::uint32_t npcId
     ) const noexcept
@@ -80,12 +94,40 @@ public:
         return npc ? character::canonicalEmbodiment(npc->characterId) : nullptr;
     }
 
+    [[nodiscard]] const character::CharacterRenderProfile* npcRenderProfile(
+        std::uint32_t npcId
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return npc ? character::canonicalRenderProfile(npc->characterId) : nullptr;
+    }
+
     [[nodiscard]] const character::CharacterEmbodimentProfile* characterEmbodiment(
         character::CharacterInstanceId instanceId
     ) const noexcept
     {
         const character::CharacterInstance* instance = characters_.find(instanceId);
         return instance ? character::canonicalEmbodiment(instance->characterId) : nullptr;
+    }
+
+    [[nodiscard]] const character::CharacterRenderProfile* characterRenderProfile(
+        character::CharacterInstanceId instanceId
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return instance ? character::canonicalRenderProfile(instance->characterId) : nullptr;
+    }
+
+    [[nodiscard]] character::MangaFrameTreatment characterMangaFrame(
+        character::CharacterInstanceId instanceId,
+        character::MangaRenderEvent event
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return character::composeMangaFrame(
+            instance ? instance->characterId : character::CharacterId::None,
+            event
+        );
     }
 
     [[nodiscard]] character::CharacterInstance* playerCharacterInstance() noexcept
@@ -153,7 +195,7 @@ public:
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, and embodiment bindings reset"
+            "authoritative world, player, NPC, character roster, embodiment, and render canon reset"
         );
     }
 
