@@ -4,59 +4,70 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L21**. HAKUI now has deterministic character performance canon on top of the live Neeshego manga renderer. Agnathos uses Guardian Stillness with Raster Blank / Focused / Strained expression channels, Saelis uses Synthetic Precision with Neutral / Warm / Alert expression channels, and The Reaper uses a fully non-human Reaper Staccato grammar built from skull, jaw, hood, spine and skeletal pose language rather than human facial animation. The existing L15 natural chat command **“Saelis, come here”** still routes her around furniture, stops her at a social distance, and turns her toward the player.
+Current vertical layer: **L22**. HAKUI now carries named Neeshego characters from identity through embodiment, manga render grammar, native render execution, authored performance language, and concrete rig-space pose execution. Agnathos uses Guardian Stillness + Raster Veil channels, Saelis uses Synthetic Precision, and The Reaper uses a dedicated bone-only Reaper Staccato path with skull/jaw/spine/hood/cloak channels and no human facial-muscle fallback. The existing L15 natural chat command **“Saelis, come here”** still routes her around furniture, stops her at a social distance, and turns her toward the player.
 
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
 
-The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles. L19 defines presentation grammar without making rendering authoritative over gameplay. L20 executes that grammar in the native renderer. L21 adds authored motion/expression directives while leaving root motion, transforms and animation playback under their existing authorities.
+The canonical v1.01 gameplay lineage was promoted from `spiraletech/spiral-ether-tech`. Male and female remain runtime body profiles on the HAKUI humanoid rig; The Reaper owns a separate skeletal archetype. L19 defines manga presentation grammar, L20 executes it in the native SDL GPU renderer, L21 defines how each character performs, and L22 converts that performance into rig-space pose channels and binds them to the game-only native render path.
 
 ```text
 HAKUI.exe
    |
-   +-- shared world
-   +-- shared locomotion
-   +-- shared combat
-   +-- shared skateboard / BMX
-   +-- shared seating / interaction / chat
+   +-- shared world / locomotion / combat / riding / interaction / chat
+   |
    +-- Character Registry
    |      +-- Agnathos
    |      +-- Saelis
    |      `-- The Reaper
+   |
    +-- Character Embodiment
-   |      +-- Humanoid / body profile
-   |      `-- Reaper skeletal rig
+   |      +-- Humanoid
+   |      |    +-- MaleBodyProfile
+   |      |    `-- FemaleBodyProfile
+   |      `-- ReaperSkeleton
+   |
    +-- Neeshego Render Grammar
    |      +-- Raster Veil
    |      +-- Synthetic Ink
    |      `-- Xerox Crush
-   +-- Neeshego Render Execution
+   |
+   +-- Neeshego Native Render Execution
    |      +-- monochrome palette remap
    |      +-- scanline / halftone / xerox overlays
-   |      +-- portrait / impact / realm framing
-   |      `-- speed lines / tear bands / impact flash
-   `-- Character Performance Canon
-          +-- Agnathos / Guardian Stillness
-          +-- Saelis / Synthetic Precision
-          `-- Reaper / Reaper Staccato
+   |      `-- manga panel / impact / realm treatment
+   |
+   +-- Character Performance Canon
+   |      +-- Guardian Stillness
+   |      +-- Synthetic Precision
+   |      `-- Reaper Staccato
+   |
+   `-- Character Pose Executor
+          +-- spine / neck / skull / jaw
+          +-- shoulders / arm bias
+          +-- Raster-eye intensity
+          +-- Reaper hood / cloak channels
+          `-- native world-space pose execution
 ```
 
-Runtime embodiment controls for the humanoid debug avatar remain:
+## Runtime embodiment controls
+
+Humanoid debug-avatar controls remain:
 
 - default profile: `male`
 - `F6`: toggle male/female without restarting the world
 - startup override: `HAKUI_BODY_PROFILE=male|female`
 - canonical state key: `avatar.body_profile`
 
-Developer-only L20 visual QA overrides:
+Developer Neeshego visual/performance QA overrides:
 
 - `HAKUI_NEESHEGO_PROFILE=agnathos|saelis|reaper`
 - `HAKUI_NEESHEGO_EVENT=exploration|dialogue|windup|impact|realm|overload`
 
-Without those overrides, the main client follows the canonical player character and live HAKUI scene state.
+`HAKUI_NEESHEGO_PROFILE=reaper` activates the L22 bone-only Reaper performance stage. This is intentionally presentation-only while the L17 Reaper character instance remains physically unbound; L22 does not invent a gameplay transform for him.
 
-The dedicated Mannequin Lab remains an isolated rig-science surface. It compiles the unmodified debug renderer and does not inherit the game-only Neeshego execution pass.
+The dedicated Mannequin Lab remains an isolated rig-science surface. It compiles the unmodified debug renderer and does not inherit the game-only Neeshego performance/render shim.
 
 ## Canonicalization source
 
@@ -66,8 +77,6 @@ Initial source donors from `spiraletech/spiral-ether-tech`:
 - later gameplay lineage: `gpt/hakui-female-player-v1.01`
 - male mannequin authority: `gpt/hakui-mannequin-lab-v0.13-silhouette-pass`
 - female mannequin authority: `gpt/hakui-female-mannequin-lab-v0.1`
-
-The later gameplay branch is a strict descendant of the v1.01 skate baseline. The canonical import materializes the validated gameplay/rig source passes while intentionally avoiding the old separate compile-time female-game target.
 
 ## Build contracts
 
@@ -104,31 +113,24 @@ Character Registry
    |
 Character Embodiment
    |
-Neeshego Manga Render Grammar
+Manga Render Grammar
    |
-Neeshego Native Render Execution
+Native Render Execution
    |
 Character Performance Canon
+   |
+Character Pose Executor
 ```
 
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L21_CHARACTER_PERFORMANCE.md` for character-specific motion and expression
-contracts, `docs/L20_RENDER_EXECUTION.md` for native manga execution and visual-QA
-rules, `docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar and frame
-composition rules, `docs/L18_CHARACTER_EMBODIMENT.md` for character rig and
-presentation rules, `docs/L17_CHARACTER_REGISTRY.md` for runtime character
-instance and lifecycle rules, `docs/L16_CHARACTER_IDENTITY.md` for canonical
-character IDs, `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC routing,
-`docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
-`docs/L13_INTENT_PROPOSALS.md` for the inert intent contract,
-`docs/L12_WITNESS.md` for self-observation, and
-`docs/L11_ACTION_GATE.md` for the permission and NPC embodiment boundary.
-
-## HOME persistent player bridge
-
-The native client now loads one HOME-owned player transform, commits movement,
-and restores the same entity after restart. See [HOME bridge](docs/HOME_BRIDGE.md)
-for save behavior, ownership boundaries and acceptance tests.
+See `docs/L22_CHARACTER_POSE_EXECUTOR.md` for rig-space performance execution,
+`docs/L21_CHARACTER_PERFORMANCE.md` for authored character motion/expression canon,
+`docs/L20_RENDER_EXECUTION.md` for native manga execution,
+`docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar,
+`docs/L18_CHARACTER_EMBODIMENT.md` for character rig rules,
+`docs/L17_CHARACTER_REGISTRY.md` for runtime character lifecycle,
+`docs/L16_CHARACTER_IDENTITY.md` for canonical character IDs,
+and `docs/HOME_BRIDGE.md` for persistent HOME-owned player transform behavior.

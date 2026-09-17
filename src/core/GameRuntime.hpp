@@ -4,6 +4,7 @@
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
 #include "character/CharacterPerformanceProfile.hpp"
+#include "character/CharacterPoseExecutor.hpp"
 #include "character/CharacterRegistry.hpp"
 #include "character/CharacterRenderProfile.hpp"
 #include "interaction/InteractionRegistry.hpp"
@@ -24,8 +25,8 @@ namespace hakui {
 // L18 adds immutable embodiment profiles. L19 adds immutable manga render
 // grammar plus deterministic frame-treatment composition without moving GPU or
 // presentation-resource ownership into gameplay state. L21 adds immutable
-// character performance canon and deterministic pose/expression samples while
-// keeping animation playback and transforms in their existing authorities.
+// character performance canon. L22 resolves those authored samples into
+// rig-space pose channels without taking root-motion or transform authority.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -100,6 +101,30 @@ public:
         return character::composeCharacterPerformance(player_.state().characterId, event);
     }
 
+    [[nodiscard]] character::CharacterPoseExecution playerPoseExecution(
+        character::CharacterPerformanceEvent event,
+        float phase01
+    ) const noexcept
+    {
+        return character::executeCharacterPerformance(
+            player_.state().characterId,
+            event,
+            phase01
+        );
+    }
+
+    [[nodiscard]] character::CharacterPoseExecution playerPoseExecution(
+        character::MangaRenderEvent event,
+        float phase01
+    ) const noexcept
+    {
+        return character::executeCharacterPerformance(
+            player_.state().characterId,
+            event,
+            phase01
+        );
+    }
+
     [[nodiscard]] const character::CharacterIdentity* npcIdentity(
         std::uint32_t npcId
     ) const noexcept
@@ -130,6 +155,20 @@ public:
     {
         const NpcState* npc = npcs_.find(npcId);
         return npc ? character::canonicalPerformanceProfile(npc->characterId) : nullptr;
+    }
+
+    [[nodiscard]] character::CharacterPoseExecution npcPoseExecution(
+        std::uint32_t npcId,
+        character::CharacterPerformanceEvent event,
+        float phase01
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return character::executeCharacterPerformance(
+            npc ? npc->characterId : character::CharacterId::None,
+            event,
+            phase01
+        );
     }
 
     [[nodiscard]] const character::CharacterEmbodimentProfile* characterEmbodiment(
@@ -177,6 +216,20 @@ public:
         return character::composeCharacterPerformance(
             instance ? instance->characterId : character::CharacterId::None,
             event
+        );
+    }
+
+    [[nodiscard]] character::CharacterPoseExecution characterPoseExecution(
+        character::CharacterInstanceId instanceId,
+        character::CharacterPerformanceEvent event,
+        float phase01
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return character::executeCharacterPerformance(
+            instance ? instance->characterId : character::CharacterId::None,
+            event,
+            phase01
         );
     }
 
@@ -245,7 +298,7 @@ public:
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, embodiment, render, and performance canon reset"
+            "authoritative world, player, NPC, character roster, embodiment, render, performance, and pose canon reset"
         );
     }
 
