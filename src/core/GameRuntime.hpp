@@ -3,6 +3,7 @@
 #include "action/HakuiActionGate.hpp"
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
+#include "character/CharacterPerformanceProfile.hpp"
 #include "character/CharacterRegistry.hpp"
 #include "character/CharacterRenderProfile.hpp"
 #include "interaction/InteractionRegistry.hpp"
@@ -22,7 +23,9 @@ namespace hakui {
 // fixed-budget character registry for stable instance identity and lifecycle.
 // L18 adds immutable embodiment profiles. L19 adds immutable manga render
 // grammar plus deterministic frame-treatment composition without moving GPU or
-// presentation-resource ownership into gameplay state.
+// presentation-resource ownership into gameplay state. L21 adds immutable
+// character performance canon and deterministic pose/expression samples while
+// keeping animation playback and transforms in their existing authorities.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -71,11 +74,30 @@ public:
         return character::canonicalRenderProfile(player_.state().characterId);
     }
 
+    [[nodiscard]] const character::CharacterPerformanceProfile* playerPerformanceProfile() const noexcept
+    {
+        return character::canonicalPerformanceProfile(player_.state().characterId);
+    }
+
     [[nodiscard]] character::MangaFrameTreatment playerMangaFrame(
         character::MangaRenderEvent event
     ) const noexcept
     {
         return character::composeMangaFrame(player_.state().characterId, event);
+    }
+
+    [[nodiscard]] character::CharacterPerformanceFrame playerPerformanceFrame(
+        character::CharacterPerformanceEvent event
+    ) const noexcept
+    {
+        return character::composeCharacterPerformance(player_.state().characterId, event);
+    }
+
+    [[nodiscard]] character::CharacterPerformanceFrame playerPerformanceFrame(
+        character::MangaRenderEvent event
+    ) const noexcept
+    {
+        return character::composeCharacterPerformance(player_.state().characterId, event);
     }
 
     [[nodiscard]] const character::CharacterIdentity* npcIdentity(
@@ -102,6 +124,14 @@ public:
         return npc ? character::canonicalRenderProfile(npc->characterId) : nullptr;
     }
 
+    [[nodiscard]] const character::CharacterPerformanceProfile* npcPerformanceProfile(
+        std::uint32_t npcId
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return npc ? character::canonicalPerformanceProfile(npc->characterId) : nullptr;
+    }
+
     [[nodiscard]] const character::CharacterEmbodimentProfile* characterEmbodiment(
         character::CharacterInstanceId instanceId
     ) const noexcept
@@ -118,6 +148,14 @@ public:
         return instance ? character::canonicalRenderProfile(instance->characterId) : nullptr;
     }
 
+    [[nodiscard]] const character::CharacterPerformanceProfile* characterPerformanceProfile(
+        character::CharacterInstanceId instanceId
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return instance ? character::canonicalPerformanceProfile(instance->characterId) : nullptr;
+    }
+
     [[nodiscard]] character::MangaFrameTreatment characterMangaFrame(
         character::CharacterInstanceId instanceId,
         character::MangaRenderEvent event
@@ -125,6 +163,18 @@ public:
     {
         const character::CharacterInstance* instance = characters_.find(instanceId);
         return character::composeMangaFrame(
+            instance ? instance->characterId : character::CharacterId::None,
+            event
+        );
+    }
+
+    [[nodiscard]] character::CharacterPerformanceFrame characterPerformanceFrame(
+        character::CharacterInstanceId instanceId,
+        character::CharacterPerformanceEvent event
+    ) const noexcept
+    {
+        const character::CharacterInstance* instance = characters_.find(instanceId);
+        return character::composeCharacterPerformance(
             instance ? instance->characterId : character::CharacterId::None,
             event
         );
@@ -195,7 +245,7 @@ public:
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, embodiment, and render canon reset"
+            "authoritative world, player, NPC, character roster, embodiment, render, and performance canon reset"
         );
     }
 
