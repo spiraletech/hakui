@@ -4,10 +4,13 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L15**. Saelis can execute a host-approved
-`WalkTo(player)` proposal through deterministic, obstacle-aware Black Room
-navigation. Natural chat command **“Saelis, come here”** routes her around
-furniture, stops her at a social distance, and turns her toward the player.
+Current vertical layer: **L16**. HAKUI now has an immutable character identity
+layer on top of its deterministic world/body simulation. Agnathos is the
+playable canonical identity, Saelis is the current authored companion identity,
+and The Reaper is defined as a non-human skeletal character for later spawning.
+The existing L15 natural chat command **“Saelis, come here”** still routes her
+around furniture, stops her at a social distance, and turns her toward the
+player.
 
 ## Current Trinity unification
 
@@ -89,8 +92,9 @@ XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC routing,
-`docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
+See `docs/L16_CHARACTER_IDENTITY.md` for canonical character IDs and the L17
+registry boundary, `docs/L15_NAVIGATION_FOUNDATION.md` for deterministic NPC
+routing, `docs/L14_NPC_ACTION_EXECUTOR.md` for the executor boundary,
 `docs/L13_INTENT_PROPOSALS.md` for the inert intent contract,
 `docs/L12_WITNESS.md` for self-observation, and
 `docs/L11_ACTION_GATE.md` for the permission and NPC embodiment boundary.
