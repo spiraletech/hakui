@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "character/CharacterIdentity.hpp"
+
 enum class LocomotionMode {
     OnFoot,
     Skateboard,
@@ -17,6 +19,11 @@ enum class PlayerActivity {
 };
 
 struct PlayerState {
+    // L16 character identity is immutable canon referenced by deterministic
+    // player state. Runtime systems may mutate gameplay state below, but they
+    // do not rewrite what character this player represents.
+    hakui::character::CharacterId characterId =
+        hakui::character::CharacterId::Agnathos;
     std::string displayName = "ETHER";
     LocomotionMode locomotion = LocomotionMode::OnFoot;
 
