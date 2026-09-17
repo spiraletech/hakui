@@ -1,6 +1,7 @@
 #pragma once
 
 #include "action/HakuiActionGate.hpp"
+#include "character/CharacterIdentity.hpp"
 #include "interaction/InteractionRegistry.hpp"
 #include "npc/NpcManager.hpp"
 #include "player/PlayerRuntime.hpp"
@@ -14,10 +15,14 @@ namespace hakui {
 // L10 extends the L5 split with an explicit NPC authority. World, player,
 // residents and interaction membership each have one owner while platform
 // input, rendering, audio, chat, combat and Spiral orchestration remain outside
-// this class.
+// this class. L16 adds immutable character identity references without moving
+// mutable gameplay state out of those established authorities.
 class GameRuntime final {
 public:
-    GameRuntime() = default;
+    GameRuntime() noexcept
+    {
+        bindCanonicalCharacters();
+    }
     GameRuntime(const GameRuntime&) = delete;
     GameRuntime& operator=(const GameRuntime&) = delete;
     GameRuntime(GameRuntime&&) = delete;
@@ -40,6 +45,19 @@ public:
 
     InteractionRegistry& interactionRegistry() noexcept { return interactions_; }
     const InteractionRegistry& interactionRegistry() const noexcept { return interactions_; }
+
+    [[nodiscard]] const character::CharacterIdentity* playerIdentity() const noexcept
+    {
+        return character::canonicalIdentity(player_.state().characterId);
+    }
+
+    [[nodiscard]] const character::CharacterIdentity* npcIdentity(
+        std::uint32_t npcId
+    ) const noexcept
+    {
+        const NpcState* npc = npcs_.find(npcId);
+        return npc ? character::canonicalIdentity(npc->characterId) : nullptr;
+    }
 
     // Compatibility accessors for the existing native-client call sites.
     // These delegate into explicit authority roots rather than exposing
@@ -72,6 +90,7 @@ public:
     void resetPlayerToSpawn(float startingMoney = 250.0f) noexcept
     {
         player_.resetToSpawn(world_.blackRoom().movementEnvironment(), startingMoney);
+        player_.state().characterId = character::CharacterId::Agnathos;
     }
 
     // Full deterministic gameplay reset. Interaction membership intentionally
@@ -82,16 +101,25 @@ public:
         world_.reset();
         resetPlayerToSpawn(startingMoney);
         npcs_.reset(world_.blackRoom());
+        bindCanonicalCharacters();
         witness_.observed(
             world_.clock().step(),
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, and NPC state reset"
+            "authoritative world, player, NPC, and character bindings reset"
         );
     }
 
 private:
+    void bindCanonicalCharacters() noexcept
+    {
+        player_.state().characterId = character::CharacterId::Agnathos;
+        if (NpcState* saelis = npcs_.find(NpcManager::saelisId)) {
+            saelis->characterId = character::CharacterId::Saelis;
+        }
+    }
+
     HakuiWorldState world_{};
     PlayerRuntime player_{};
     NpcManager npcs_{};
