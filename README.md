@@ -4,13 +4,13 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L20**. HAKUI now executes the Neeshego manga render grammar in the native SDL GPU client. Agnathos runs through scanline-dominant Raster Veil execution, Saelis through cleaner synthetic monochrome treatment, and The Reaper through xerox-crush execution. Exploration, dialogue, combat windup, combat impact, realm-shift preview, and overload preview all resolve through the L19 frame canon into bounded L20 draw parameters. The existing L15 natural chat command **“Saelis, come here”** still routes her around furniture, stops her at a social distance, and turns her toward the player.
+Current vertical layer: **L21**. HAKUI now has deterministic character performance canon on top of the live Neeshego manga renderer. Agnathos uses Guardian Stillness with Raster Blank / Focused / Strained expression channels, Saelis uses Synthetic Precision with Neutral / Warm / Alert expression channels, and The Reaper uses a fully non-human Reaper Staccato grammar built from skull, jaw, hood, spine and skeletal pose language rather than human facial animation. The existing L15 natural chat command **“Saelis, come here”** still routes her around furniture, stops her at a social distance, and turns her toward the player.
 
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
 
-The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles. L19 defines presentation grammar without making rendering authoritative over gameplay. L20 executes that grammar in the native renderer while preserving the same authority boundary.
+The canonical v1.01 gameplay lineage has been promoted from `spiraletech/spiral-ether-tech`. Male and female are runtime body profiles on the HAKUI humanoid rig; L18 adds a separate Reaper skeletal archetype instead of forcing non-human characters through those body profiles. L19 defines presentation grammar without making rendering authoritative over gameplay. L20 executes that grammar in the native renderer. L21 adds authored motion/expression directives while leaving root motion, transforms and animation playback under their existing authorities.
 
 ```text
 HAKUI.exe
@@ -31,11 +31,15 @@ HAKUI.exe
    |      +-- Raster Veil
    |      +-- Synthetic Ink
    |      `-- Xerox Crush
-   `-- Neeshego Render Execution
-          +-- monochrome palette remap
-          +-- scanline / halftone / xerox overlays
-          +-- portrait / impact / realm framing
-          `-- speed lines / tear bands / impact flash
+   +-- Neeshego Render Execution
+   |      +-- monochrome palette remap
+   |      +-- scanline / halftone / xerox overlays
+   |      +-- portrait / impact / realm framing
+   |      `-- speed lines / tear bands / impact flash
+   `-- Character Performance Canon
+          +-- Agnathos / Guardian Stillness
+          +-- Saelis / Synthetic Precision
+          `-- Reaper / Reaper Staccato
 ```
 
 Runtime embodiment controls for the humanoid debug avatar remain:
@@ -103,14 +107,17 @@ Character Embodiment
 Neeshego Manga Render Grammar
    |
 Neeshego Native Render Execution
+   |
+Character Performance Canon
 ```
 
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L20_RENDER_EXECUTION.md` for native manga execution and visual-QA rules,
-`docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar and frame
+See `docs/L21_CHARACTER_PERFORMANCE.md` for character-specific motion and expression
+contracts, `docs/L20_RENDER_EXECUTION.md` for native manga execution and visual-QA
+rules, `docs/L19_MANGA_RENDER_PROFILE.md` for B&W character render grammar and frame
 composition rules, `docs/L18_CHARACTER_EMBODIMENT.md` for character rig and
 presentation rules, `docs/L17_CHARACTER_REGISTRY.md` for runtime character
 instance and lifecycle rules, `docs/L16_CHARACTER_IDENTITY.md` for canonical
