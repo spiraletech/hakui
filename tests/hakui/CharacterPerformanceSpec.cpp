@@ -1,8 +1,10 @@
+#include "character/CharacterActorAuthority.hpp"
 #include "character/CharacterPerformanceProfile.hpp"
 #include "character/CharacterPoseExecutor.hpp"
 #include "core/GameRuntime.hpp"
 
 #include <cassert>
+#include <cmath>
 
 int main()
 {
@@ -171,9 +173,66 @@ int main()
     assert(runtimeReaperPose.characterId == CharacterId::Reaper);
     assert(runtimeReaperPose.skeletalOnly);
 
+    // L23: Reaper is no longer only a spawned identity/performance preview. He
+    // owns an independent authoritative world actor because he is deliberately
+    // not bound to PlayerRuntime or the humanoid NpcManager.
+    const CharacterActorState* reaperActor =
+        runtime.independentCharacterActor(CharacterId::Reaper);
+    assert(reaperActor != nullptr);
+    assert(reaperActor->active);
+    assert(reaperActor->instanceId == reaperInstanceId);
+    assert(reaperActor->characterId == CharacterId::Reaper);
+    assert(reaperActor->grounded);
+    assert(runtime.characterActors().size() == 1);
+
+    const float authoredSpawnX = reaperActor->spawnX;
+    const float authoredSpawnZ = reaperActor->spawnZ;
+    assert(std::fabs(reaperActor->x - authoredSpawnX) < 0.0001f);
+    assert(std::fabs(reaperActor->z - authoredSpawnZ) < 0.0001f);
+
+    assert(runtime.requestIndependentCharacterWalkTo(
+        CharacterId::Reaper,
+        authoredSpawnX - 1.0f,
+        reaperActor->spawnY,
+        authoredSpawnZ
+    ));
+    runtime.characterActors().tick(
+        runtime.player().x,
+        runtime.player().y,
+        runtime.player().z,
+        0.10f
+    );
+    reaperActor = runtime.independentCharacterActor(CharacterId::Reaper);
+    assert(reaperActor != nullptr);
+    assert(reaperActor->x < authoredSpawnX);
+    assert(reaperActor->activity == CharacterActorActivity::Walking);
+    assert(reaperActor->movementBlend > 0.0f);
+
+    // Proximity is authoritative actor state, not a renderer guess.
+    runtime.player().x = reaperActor->x;
+    runtime.player().y = reaperActor->y;
+    runtime.player().z = reaperActor->z;
+    runtime.characterActors().tick(
+        runtime.player().x,
+        runtime.player().y,
+        runtime.player().z,
+        0.10f
+    );
+    assert(runtime.independentCharacterInInteractionRange(CharacterId::Reaper));
+
+    const auto published = publishedCharacterActors();
+    assert(published.size() == 1);
+    assert(published.front().characterId == CharacterId::Reaper);
+    assert(std::fabs(published.front().x -
+                     runtime.independentCharacterActor(CharacterId::Reaper)->x) < 0.0001f);
+
     runtime.resetSession();
     assert(runtime.playerPerformanceProfile() == agnathos);
     assert(runtime.characterPerformanceProfile(reaperInstanceId) == reaper);
+    reaperActor = runtime.independentCharacterActor(CharacterId::Reaper);
+    assert(reaperActor != nullptr);
+    assert(std::fabs(reaperActor->x - reaperActor->spawnX) < 0.0001f);
+    assert(std::fabs(reaperActor->z - reaperActor->spawnZ) < 0.0001f);
 
     return 0;
 }
