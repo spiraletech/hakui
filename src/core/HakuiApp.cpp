@@ -2076,18 +2076,28 @@ void HakuiApp::updateHud()
                 );
             }
 
-            SDL_snprintf(
-                title,
-                sizeof(title),
-                runtime_.characterDialogueComplete()
-                    ? "HAKUI v1.01 // THE REAPER // %.*s // AUTHORED TERMINAL NODE // %.*s LEAVE // INPUT %.*s"
-                    : "HAKUI v1.01 // THE REAPER // %.*s // %s // ENTER CHOOSE // %.*s LEAVE // INPUT %.*s",
-                static_cast<int>(dialogueNode->text.size()),
-                dialogueNode->text.data(),
-                options,
-                static_cast<int>(cancel.size()), cancel.data(),
-                static_cast<int>(device.size()), device.data()
-            );
+            if (runtime_.characterDialogueComplete()) {
+                SDL_snprintf(
+                    title,
+                    sizeof(title),
+                    "HAKUI v1.01 // THE REAPER // %.*s // AUTHORED TERMINAL NODE // %.*s LEAVE // INPUT %.*s",
+                    static_cast<int>(dialogueNode->text.size()),
+                    dialogueNode->text.data(),
+                    static_cast<int>(cancel.size()), cancel.data(),
+                    static_cast<int>(device.size()), device.data()
+                );
+            } else {
+                SDL_snprintf(
+                    title,
+                    sizeof(title),
+                    "HAKUI v1.01 // THE REAPER // %.*s // %s // ENTER CHOOSE // %.*s LEAVE // INPUT %.*s",
+                    static_cast<int>(dialogueNode->text.size()),
+                    dialogueNode->text.data(),
+                    options,
+                    static_cast<int>(cancel.size()), cancel.data(),
+                    static_cast<int>(device.size()), device.data()
+                );
+            }
         } else {
             SDL_snprintf(
                 title,
