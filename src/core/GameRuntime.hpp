@@ -2,6 +2,7 @@
 
 #include "action/HakuiActionGate.hpp"
 #include "character/CharacterActorAuthority.hpp"
+#include "character/CharacterDialogueContent.hpp"
 #include "character/CharacterStoryAuthority.hpp"
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
@@ -33,6 +34,8 @@ namespace hakui {
 // members that are intentionally not PlayerRuntime or NpcManager entities.
 // L24 adds story-interaction authority without auto-authoring dialogue, plot,
 // relationship outcomes, or chapter content.
+// L25 adds explicitly installed authored dialogue graphs, deterministic choice
+// resolution and authored story effects while keeping the default catalog empty.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -76,6 +79,70 @@ public:
     const character::CharacterStoryAuthority& characterStory() const noexcept
     {
         return characterStory_;
+    }
+
+    character::CharacterDialogueCatalog& dialogueCatalog() noexcept
+    {
+        return dialogueCatalog_;
+    }
+
+    const character::CharacterDialogueCatalog& dialogueCatalog() const noexcept
+    {
+        return dialogueCatalog_;
+    }
+
+    const character::CharacterDialogueRuntime& characterDialogue() const noexcept
+    {
+        return characterDialogue_;
+    }
+
+    bool installCharacterDialogueGraph(
+        character::AuthoredDialogueGraph graph
+    ) noexcept
+    {
+        return dialogueCatalog_.install(graph);
+    }
+
+    bool beginCharacterDialogue(
+        character::CharacterId characterId
+    ) noexcept
+    {
+        return characterDialogue_.begin(
+            dialogueCatalog_, characterStory_, characterId
+        );
+    }
+
+    [[nodiscard]] bool characterDialogueActive() const noexcept
+    {
+        return characterDialogue_.active();
+    }
+
+    [[nodiscard]] bool characterDialogueComplete() const noexcept
+    {
+        return characterDialogue_.complete();
+    }
+
+    [[nodiscard]] const character::AuthoredDialogueNode*
+    currentCharacterDialogueNode() const noexcept
+    {
+        return characterDialogue_.currentNode(dialogueCatalog_);
+    }
+
+    [[nodiscard]] character::AvailableDialogueChoices
+    availableCharacterDialogueChoices() const noexcept
+    {
+        return characterDialogue_.availableChoices(
+            dialogueCatalog_, characterStory_
+        );
+    }
+
+    character::DialogueSelectionResult selectCharacterDialogueChoice(
+        std::size_t ordinal
+    ) noexcept
+    {
+        return characterDialogue_.selectChoiceByOrdinal(
+            dialogueCatalog_, characterStory_, ordinal
+        );
     }
 
     HakuiActionGate& actionGate() noexcept { return actionGate_; }
@@ -338,6 +405,7 @@ public:
 
     bool endCharacterStoryInteraction() noexcept
     {
+        characterDialogue_.reset();
         return characterStory_.endInteraction();
     }
 
@@ -392,12 +460,13 @@ public:
         characters_.resetCanonicalRoster(NpcManager::saelisId);
         resetIndependentCharacterActors();
         characterStory_.reset();
+        characterDialogue_.reset();
         witness_.observed(
             world_.clock().step(),
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, independent actor, story interaction, embodiment, render, performance, and pose canon reset"
+            "authoritative world, player, NPC, character roster, independent actor, story interaction, dialogue session, embodiment, render, performance, and pose canon reset"
         );
     }
 
@@ -431,6 +500,8 @@ private:
     character::CharacterRegistry characters_;
     character::CharacterActorAuthority characterActors_{};
     character::CharacterStoryAuthority characterStory_{};
+    character::CharacterDialogueCatalog dialogueCatalog_{};
+    character::CharacterDialogueRuntime characterDialogue_{};
     HakuiActionGate actionGate_{};
     witness::HakuiWitness witness_{256};
     InteractionRegistry interactions_{};
