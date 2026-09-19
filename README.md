@@ -4,13 +4,13 @@ Canonical HAKUI game-engine repository.
 
 HAKUI is the world/body host for the first Spiral Trinity. The engine remains independently playable; Spiral AI connects later through a dedicated HakuiAdapter rather than being fused into renderer, physics, or gameplay code.
 
-Current vertical layer: **L24**. HAKUI now carries named Neeshego characters from identity through embodiment, manga render execution, authored performance, rig-space posing, independent world-actor authority, and deterministic story interaction. Agnathos remains PlayerRuntime-owned, Saelis remains NpcManager-owned, and The Reaper now has both an authoritative skeletal world actor (L23) and a story-interaction track/session (L24). L24 deliberately does not auto-author dialogue, relationship outcomes, or chapter canon.
+Current vertical layer: **L25**. HAKUI now carries named Neeshego characters from identity through embodiment, manga render execution, authored performance, rig-space posing, independent world-actor authority, story interaction, and explicitly installed authored dialogue graphs. Agnathos remains PlayerRuntime-owned, Saelis remains NpcManager-owned, and The Reaper can participate in deterministic branching dialogue without giving Cortex or simulation permission to invent canon. Production starts with zero dialogue graphs installed.
 
 ## Current Trinity unification
 
 Development branch: `trinity/hakui-unification-v0.1`
 
-The canonical v1.01 gameplay lineage was promoted from `spiraletech/spiral-ether-tech`. Male and female remain runtime body profiles on the HAKUI humanoid rig; The Reaper owns a separate skeletal archetype. L19 defines manga presentation grammar, L20 executes it in the native SDL GPU renderer, L21 defines performance, L22 converts performance into rig-space pose channels, L23 gives independent cast members authoritative world-actor state, and L24 adds deterministic story interaction with explicit-only canon authoring seams.
+The canonical v1.01 gameplay lineage was promoted from `spiraletech/spiral-ether-tech`. Male and female remain runtime body profiles on the HAKUI humanoid rig; The Reaper owns a separate skeletal archetype. L19 defines manga presentation grammar, L20 executes it in the native SDL GPU renderer, L21 defines performance, L22 converts performance into rig-space pose channels, L23 gives independent cast members authoritative world-actor state, L24 adds deterministic story interaction, and L25 adds validated authored dialogue graphs, conditions, choices, effects and terminal nodes.
 
 ```text
 HAKUI.exe
@@ -56,12 +56,19 @@ HAKUI.exe
    |      +-- player proximity / interaction range
    |      `-- Reaper world-space skeletal binding
    |
-   `-- Character Story Interaction
-          +-- encounter enter / exit events
-          +-- active conversation target + player turn count
-          +-- authored chapter/node cursor seam
-          +-- authored relationship seam
-          `-- no autonomous canon mutation
+   +-- Character Story Interaction
+   |      +-- encounter enter / exit events
+   |      +-- active conversation target + player turn count
+   |      +-- authored chapter/node cursor seam
+   |      `-- authored relationship seam
+   |
+   `-- Authored Dialogue Content
+          +-- validated node graphs
+          +-- deterministic numbered choices
+          +-- relationship / story-cursor conditions
+          +-- explicit authored effects
+          +-- terminal nodes
+          `-- zero production graphs by default
 ```
 
 ## Runtime embodiment controls
@@ -77,6 +84,7 @@ Developer Neeshego visual/performance QA overrides:
 
 - `HAKUI_NEESHEGO_PROFILE=agnathos|saelis|reaper`
 - `HAKUI_NEESHEGO_EVENT=exploration|dialogue|windup|impact|realm|overload`
+- `HAKUI_NEESHEGO_DIALOGUE_FIXTURE=1` installs a developer-only graph whose text is explicitly marked `L25 NON-CANON QA`
 
 `HAKUI_NEESHEGO_PROFILE=reaper` keeps the original L22 bone-only QA stage available. In normal gameplay L23 renders The Reaper from the independent actor authority at his actual authored world transform; the QA override suppresses that L23 draw to avoid a duplicate skeleton.
 
@@ -137,13 +145,16 @@ Character Pose Executor
 Character Actor Authority
    |
 Character Story Interaction Authority
+   |
+Authored Dialogue Content
 ```
 
 XENON is the separate Music Trinity and is not the HAKUI integration bus.
 
 Migration law: preserve gameplay first, unify embodiment second, connect Spiral third.
 
-See `docs/L24_CHARACTER_STORY_INTERACTION.md` for deterministic story interaction and explicit-only canon authoring seams,
+See `docs/L25_AUTHORED_DIALOGUE_CONTENT.md` for validated authored dialogue graphs and deterministic branching,
+`docs/L24_CHARACTER_STORY_INTERACTION.md` for deterministic story interaction and explicit-only canon authoring seams,
 `docs/L23_CHARACTER_ACTOR_AUTHORITY.md` for independent cast world authority,
 `docs/L22_CHARACTER_POSE_EXECUTOR.md` for rig-space performance execution,
 `docs/L21_CHARACTER_PERFORMANCE.md` for authored character motion/expression canon,
