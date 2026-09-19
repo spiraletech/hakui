@@ -2,6 +2,7 @@
 
 #include "action/HakuiActionGate.hpp"
 #include "character/CharacterActorAuthority.hpp"
+#include "character/CharacterStoryAuthority.hpp"
 #include "character/CharacterEmbodiment.hpp"
 #include "character/CharacterIdentity.hpp"
 #include "character/CharacterPerformanceProfile.hpp"
@@ -30,6 +31,8 @@ namespace hakui {
 // rig-space pose channels without taking root-motion or transform authority.
 // L23 adds independent character-actor authority for spawned canonical cast
 // members that are intentionally not PlayerRuntime or NpcManager entities.
+// L24 adds story-interaction authority without auto-authoring dialogue, plot,
+// relationship outcomes, or chapter content.
 class GameRuntime final {
 public:
     GameRuntime() noexcept
@@ -63,6 +66,16 @@ public:
     const character::CharacterActorAuthority& characterActors() const noexcept
     {
         return characterActors_;
+    }
+
+    character::CharacterStoryAuthority& characterStory() noexcept
+    {
+        return characterStory_;
+    }
+
+    const character::CharacterStoryAuthority& characterStory() const noexcept
+    {
+        return characterStory_;
     }
 
     HakuiActionGate& actionGate() noexcept { return actionGate_; }
@@ -311,6 +324,28 @@ public:
         return characterActors_.canInteract(characterId);
     }
 
+    bool beginCharacterStoryInteraction(
+        character::CharacterId characterId
+    ) noexcept
+    {
+        return characterStory_.beginInteraction(characterActors_, characterId);
+    }
+
+    bool submitCharacterStoryPlayerTurn() noexcept
+    {
+        return characterStory_.submitPlayerTurn();
+    }
+
+    bool endCharacterStoryInteraction() noexcept
+    {
+        return characterStory_.endInteraction();
+    }
+
+    [[nodiscard]] bool characterStoryInteractionActive() const noexcept
+    {
+        return characterStory_.interactionActive();
+    }
+
     BlackRoom& blackRoom() noexcept { return world_.blackRoom(); }
     const BlackRoom& blackRoom() const noexcept { return world_.blackRoom(); }
 
@@ -335,6 +370,10 @@ public:
                 player_.state().z,
                 deltaSeconds
             );
+            for (const character::CharacterActorState& actor :
+                 characterActors_.states()) {
+                characterStory_.observeActor(actor);
+            }
         }
     }
 
@@ -352,12 +391,13 @@ public:
         bindCanonicalCharacters();
         characters_.resetCanonicalRoster(NpcManager::saelisId);
         resetIndependentCharacterActors();
+        characterStory_.reset();
         witness_.observed(
             world_.clock().step(),
             world_.elapsedSeconds,
             witness::WitnessKind::Mutation,
             "runtime.session",
-            "authoritative world, player, NPC, character roster, independent actor, embodiment, render, performance, and pose canon reset"
+            "authoritative world, player, NPC, character roster, independent actor, story interaction, embodiment, render, performance, and pose canon reset"
         );
     }
 
@@ -390,6 +430,7 @@ private:
     NpcManager npcs_{};
     character::CharacterRegistry characters_;
     character::CharacterActorAuthority characterActors_{};
+    character::CharacterStoryAuthority characterStory_{};
     HakuiActionGate actionGate_{};
     witness::HakuiWitness witness_{256};
     InteractionRegistry interactions_{};

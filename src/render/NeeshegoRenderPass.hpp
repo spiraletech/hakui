@@ -62,7 +62,7 @@ inline constexpr Uint32 neeshegoVoidPalette = 5;
         scene.playerCombatState == combat::CombatState::Windup) {
         return character::MangaRenderEvent::CombatWindup;
     }
-    if (scene.chatInputActive || scene.chatBubbleActive) {
+    if (scene.characterStoryDialogueActive || scene.chatInputActive || scene.chatBubbleActive) {
         return character::MangaRenderEvent::Dialogue;
     }
     return character::MangaRenderEvent::Exploration;
