@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "avatar/AvatarGroundContact.hpp"
+#include "character/CharacterDialogueFixture.hpp"
 #include "avatar/RideAttachmentRig.hpp"
 #include "observer/NativeFrameCapture.hpp"
 #include "render/Math3D.hpp"
@@ -184,6 +185,19 @@ bool HakuiApp::boot()
                 bodyProfile_.active().name.data()
             );
         }
+    }
+
+    if (const char* dialogueFixture =
+            SDL_getenv("HAKUI_NEESHEGO_DIALOGUE_FIXTURE");
+        dialogueFixture && std::string_view{dialogueFixture} == "1") {
+        const bool installed = runtime_.installCharacterDialogueGraph(
+            hakui::character::l25DeveloperDialogueFixture()
+        );
+        SDL_Log(
+            installed
+                ? "[STORY] L25 NON-CANON dialogue fixture // INSTALLED"
+                : "[STORY] L25 NON-CANON dialogue fixture // REJECTED"
+        );
     }
 
     initSpiralCore();
@@ -1116,6 +1130,9 @@ void HakuiApp::handlePrimaryInteraction()
         }
         if (runtime_.beginCharacterStoryInteraction(
                 hakui::character::CharacterId::Reaper)) {
+            const bool authoredDialogue = runtime_.beginCharacterDialogue(
+                hakui::character::CharacterId::Reaper
+            );
             player_.velocityX = 0.0f;
             player_.velocityY = 0.0f;
             player_.velocityZ = 0.0f;
@@ -1130,13 +1147,21 @@ void HakuiApp::handlePrimaryInteraction()
                 );
                 debugRenderer_.setCameraRole(CameraRole::TargetFrame);
             }
+            const hakui::character::AuthoredDialogueNode* dialogueNode =
+                runtime_.currentCharacterDialogueNode();
             showInputStatus(
-                "THE REAPER // STORY INTERACTION // ENTER TALK // ESC LEAVE",
+                authoredDialogue && dialogueNode
+                    ? std::string(dialogueNode->text)
+                    : std::string(
+                        "THE REAPER // STORY INTERACTION // AUTHORED CONTENT UNRESOLVED"
+                    ),
                 4.0f
             );
             recordObserverEvent(
                 "story.interaction",
-                "Reaper conversation opened; authored content unresolved"
+                authoredDialogue
+                    ? "Reaper conversation opened with authored dialogue graph"
+                    : "Reaper conversation opened; authored content unresolved"
             );
             audio_.play(HakuiAudioCue::Interact);
             return;
@@ -1505,18 +1530,79 @@ void HakuiApp::commitChatInput()
     if (message) {
         if (routeToStory) {
             const bool recorded = runtime_.submitCharacterStoryPlayerTurn();
-            showInputStatus(
-                recorded
-                    ? "THE REAPER // PLAYER TURN RECORDED // AUTHORED RESPONSE PENDING"
-                    : "STORY TURN REJECTED",
-                3.2f
-            );
-            recordObserverEvent(
-                recorded ? "story.player_turn" : "story.player_turn.denied",
-                recorded
-                    ? "Reaper player turn recorded; no autonomous canon response"
-                    : "story turn rejected"
-            );
+
+            if (recorded && runtime_.characterDialogueActive()) {
+                if (runtime_.characterDialogueComplete()) {
+                    showInputStatus(
+                        "THE REAPER // TERMINAL AUTHORED NODE // ESC LEAVE",
+                        3.2f
+                    );
+                    recordObserverEvent(
+                        "story.dialogue.complete",
+                        "player submitted after terminal authored node"
+                    );
+                } else {
+                    std::size_t ordinal = 0;
+                    if (message->text.size() == 1 &&
+                        message->text[0] >= '1' &&
+                        message->text[0] <= '4') {
+                        ordinal = static_cast<std::size_t>(
+                            message->text[0] - '0'
+                        );
+                    }
+
+                    const hakui::character::DialogueSelectionResult selected =
+                        runtime_.selectCharacterDialogueChoice(ordinal);
+                    const hakui::character::AuthoredDialogueNode* node =
+                        runtime_.currentCharacterDialogueNode();
+
+                    if (selected ==
+                        hakui::character::DialogueSelectionResult::Rejected) {
+                        const auto available =
+                            runtime_.availableCharacterDialogueChoices();
+                        char status[256];
+                        SDL_snprintf(
+                            status,
+                            sizeof(status),
+                            "THE REAPER // TYPE CHOICE 1-%zu // AUTHORED GRAPH",
+                            available.count
+                        );
+                        showInputStatus(status, 3.2f);
+                        recordObserverEvent(
+                            "story.dialogue.choice.denied",
+                            "invalid authored dialogue choice ordinal"
+                        );
+                    } else {
+                        showInputStatus(
+                            node
+                                ? std::string(node->text)
+                                : std::string("AUTHORED DIALOGUE NODE ADVANCED"),
+                            4.0f
+                        );
+                        recordObserverEvent(
+                            selected ==
+                                hakui::character::DialogueSelectionResult::Completed
+                                ? "story.dialogue.completed"
+                                : "story.dialogue.advanced",
+                            "authored dialogue choice executed"
+                        );
+                    }
+                }
+            } else {
+                showInputStatus(
+                    recorded
+                        ? "THE REAPER // PLAYER TURN RECORDED // AUTHORED RESPONSE PENDING"
+                        : "STORY TURN REJECTED",
+                    3.2f
+                );
+                recordObserverEvent(
+                    recorded ? "story.player_turn" : "story.player_turn.denied",
+                    recorded
+                        ? "Reaper player turn recorded; no autonomous canon response"
+                        : "story turn rejected"
+                );
+            }
+
             SDL_Log(
                 recorded
                     ? "[STORY] PLAYER TURN // REAPER // %s"
@@ -1910,14 +1996,27 @@ void HakuiApp::updateHud()
     char title[768];
     if (chat_.inputActive()) {
         if (runtime_.characterStoryInteractionActive()) {
-            SDL_snprintf(
-                title,
-                sizeof(title),
-                "HAKUI v1.01 // THE REAPER // STORY INPUT // %s_ // ENTER SUBMIT TURN // ESC CANCEL // %zu/%zu // NO AUTO-CANON",
-                chat_.inputBuffer().c_str(),
-                chat_.inputCodepoints(),
-                chat_.tuning().maximumMessageCodepoints
-            );
+            if (runtime_.characterDialogueActive() &&
+                !runtime_.characterDialogueComplete()) {
+                const auto choices =
+                    runtime_.availableCharacterDialogueChoices();
+                SDL_snprintf(
+                    title,
+                    sizeof(title),
+                    "HAKUI v1.01 // THE REAPER // AUTHORED CHOICE INPUT // TYPE 1-%zu // %s_ // ENTER SELECT // ESC CANCEL // NO CORTEX",
+                    choices.count,
+                    chat_.inputBuffer().c_str()
+                );
+            } else {
+                SDL_snprintf(
+                    title,
+                    sizeof(title),
+                    "HAKUI v1.01 // THE REAPER // STORY INPUT // %s_ // ENTER SUBMIT TURN // ESC CANCEL // %zu/%zu // NO AUTO-CANON",
+                    chat_.inputBuffer().c_str(),
+                    chat_.inputCodepoints(),
+                    chat_.tuning().maximumMessageCodepoints
+                );
+            }
         } else {
             SDL_snprintf(
                 title,
@@ -1950,14 +2049,55 @@ void HakuiApp::updateHud()
         );
     } else if (runtime_.characterStoryInteractionActive()) {
         const auto& storySession = runtime_.characterStory().session();
-        SDL_snprintf(
-            title,
-            sizeof(title),
-            "HAKUI v1.01 // THE REAPER // STORY INTERACTION // TURN %u // ENTER TALK // %.*s LEAVE // CANON CONTENT UNAUTHORED // INPUT %.*s",
-            storySession.playerTurnCount,
-            static_cast<int>(cancel.size()), cancel.data(),
-            static_cast<int>(device.size()), device.data()
-        );
+        const hakui::character::AuthoredDialogueNode* dialogueNode =
+            runtime_.currentCharacterDialogueNode();
+
+        if (runtime_.characterDialogueActive() && dialogueNode) {
+            char options[360]{};
+            std::size_t optionOffset = 0;
+            const auto choices = runtime_.availableCharacterDialogueChoices();
+            for (std::size_t index = 0;
+                 index < choices.count && optionOffset + 8 < sizeof(options);
+                 ++index) {
+                const std::string_view choiceText = choices.choices[index]->text;
+                const int written = SDL_snprintf(
+                    options + optionOffset,
+                    sizeof(options) - optionOffset,
+                    "%s%zu:%.*s",
+                    index == 0 ? "" : " | ",
+                    index + 1,
+                    static_cast<int>(choiceText.size()),
+                    choiceText.data()
+                );
+                if (written <= 0) break;
+                optionOffset = std::min(
+                    sizeof(options) - 1,
+                    optionOffset + static_cast<std::size_t>(written)
+                );
+            }
+
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                runtime_.characterDialogueComplete()
+                    ? "HAKUI v1.01 // THE REAPER // %.*s // AUTHORED TERMINAL NODE // %.*s LEAVE // INPUT %.*s"
+                    : "HAKUI v1.01 // THE REAPER // %.*s // %s // ENTER CHOOSE // %.*s LEAVE // INPUT %.*s",
+                static_cast<int>(dialogueNode->text.size()),
+                dialogueNode->text.data(),
+                options,
+                static_cast<int>(cancel.size()), cancel.data(),
+                static_cast<int>(device.size()), device.data()
+            );
+        } else {
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                "HAKUI v1.01 // THE REAPER // STORY INTERACTION // TURN %u // ENTER TALK // %.*s LEAVE // CANON CONTENT UNAUTHORED // INPUT %.*s",
+                storySession.playerTurnCount,
+                static_cast<int>(cancel.size()), cancel.data(),
+                static_cast<int>(device.size()), device.data()
+            );
+        }
     } else if (combat_.active()) {
         SDL_snprintf(
             title,
