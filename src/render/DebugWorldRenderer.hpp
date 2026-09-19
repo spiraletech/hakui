@@ -64,6 +64,7 @@ struct HakuiSceneState {
     float playerStanceBlend = 0.0f;
     float opponentStanceBlend = 0.0f;
     bool chatInputActive = false;
+    bool characterStoryDialogueActive = false;
     std::string_view chatInputBuffer{};
     const std::deque<hakui::social::ChatMessage>* chatHistory = nullptr;
     std::uint32_t localSpeakerId = 1;

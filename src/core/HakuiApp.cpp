@@ -1100,6 +1100,49 @@ void HakuiApp::handlePrimaryInteraction()
         return;
     }
 
+    if (runtime_.characterStoryInteractionActive()) {
+        showInputStatus(
+            "THE REAPER // STORY INTERACTION // ENTER TALK // ESC LEAVE",
+            3.0f
+        );
+        return;
+    }
+
+    if (player_.activity == PlayerActivity::Roaming &&
+        runtime_.independentCharacterInInteractionRange(
+            hakui::character::CharacterId::Reaper)) {
+        if (player_.locomotion != LocomotionMode::OnFoot) {
+            switchLocomotion(LocomotionMode::OnFoot, "on_foot");
+        }
+        if (runtime_.beginCharacterStoryInteraction(
+                hakui::character::CharacterId::Reaper)) {
+            player_.velocityX = 0.0f;
+            player_.velocityY = 0.0f;
+            player_.velocityZ = 0.0f;
+            player_.movementBlend = 0.0f;
+            if (const hakui::character::CharacterActorState* reaper =
+                    runtime_.independentCharacterActor(
+                        hakui::character::CharacterId::Reaper)) {
+                debugRenderer_.setCombatTarget(
+                    reaper->x,
+                    reaper->y + 1.35f,
+                    reaper->z
+                );
+                debugRenderer_.setCameraRole(CameraRole::TargetFrame);
+            }
+            showInputStatus(
+                "THE REAPER // STORY INTERACTION // ENTER TALK // ESC LEAVE",
+                4.0f
+            );
+            recordObserverEvent(
+                "story.interaction",
+                "Reaper conversation opened; authored content unresolved"
+            );
+            audio_.play(HakuiAudioCue::Interact);
+            return;
+        }
+    }
+
     if (player_.activity != PlayerActivity::Roaming) {
         if (player_.activity == PlayerActivity::CasinoSeated) {
             handleCasinoContextAction();
@@ -1439,14 +1482,18 @@ void HakuiApp::commitChatInput()
     }
 
     const std::string prompt = chat_.inputBuffer();
+    const bool routeToStory = runtime_.characterStoryInteractionActive();
     const hakui::SpiralPresenceView presence = spiralPresence_.view(
         hakui::SpiralPresence::defaultNearbyRadius,
         cortexStatus_
     );
     const std::optional<hakui::intent::IntentProposal> naturalProposal =
-        hakui::intent::IntentProposalParser::parsePlayerCommand(
-            prompt, nextProposalId_);
-    const bool routeToCortex = presence.playerInRange && !naturalProposal;
+        routeToStory
+            ? std::nullopt
+            : hakui::intent::IntentProposalParser::parsePlayerCommand(
+                prompt, nextProposalId_);
+    const bool routeToCortex =
+        !routeToStory && presence.playerInRange && !naturalProposal;
 
     const hakui::social::ChatMessage* message = chat_.commitLocal(
         1,
@@ -1456,6 +1503,29 @@ void HakuiApp::commitChatInput()
         SDL_StopTextInput(window_);
     }
     if (message) {
+        if (routeToStory) {
+            const bool recorded = runtime_.submitCharacterStoryPlayerTurn();
+            showInputStatus(
+                recorded
+                    ? "THE REAPER // PLAYER TURN RECORDED // AUTHORED RESPONSE PENDING"
+                    : "STORY TURN REJECTED",
+                3.2f
+            );
+            recordObserverEvent(
+                recorded ? "story.player_turn" : "story.player_turn.denied",
+                recorded
+                    ? "Reaper player turn recorded; no autonomous canon response"
+                    : "story turn rejected"
+            );
+            SDL_Log(
+                recorded
+                    ? "[STORY] PLAYER TURN // REAPER // %s"
+                    : "[STORY] PLAYER TURN REJECTED // %s",
+                message->text.c_str()
+            );
+            return;
+        }
+
         recordObserverEvent(
             routeToCortex ? "spiral.cortex.user" : "social.local",
             routeToCortex
@@ -1839,16 +1909,27 @@ void HakuiApp::updateHud()
 
     char title[768];
     if (chat_.inputActive()) {
-        SDL_snprintf(
-            title,
-            sizeof(title),
-            spiralPresenceView.playerInRange
-                ? "HAKUI v1.01 // SPIRAL INPUT // %s_ // ENTER SEND TO CORTEX // ESC CANCEL // %zu/%zu // INPUT ChatInput"
-                : "HAKUI v1.01 // CHAT INPUT // %s_ // ENTER SEND // ESC CANCEL // %zu/%zu // INPUT ChatInput",
-            chat_.inputBuffer().c_str(),
-            chat_.inputCodepoints(),
-            chat_.tuning().maximumMessageCodepoints
-        );
+        if (runtime_.characterStoryInteractionActive()) {
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                "HAKUI v1.01 // THE REAPER // STORY INPUT // %s_ // ENTER SUBMIT TURN // ESC CANCEL // %zu/%zu // NO AUTO-CANON",
+                chat_.inputBuffer().c_str(),
+                chat_.inputCodepoints(),
+                chat_.tuning().maximumMessageCodepoints
+            );
+        } else {
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                spiralPresenceView.playerInRange
+                    ? "HAKUI v1.01 // SPIRAL INPUT // %s_ // ENTER SEND TO CORTEX // ESC CANCEL // %zu/%zu // INPUT ChatInput"
+                    : "HAKUI v1.01 // CHAT INPUT // %s_ // ENTER SEND // ESC CANCEL // %zu/%zu // INPUT ChatInput",
+                chat_.inputBuffer().c_str(),
+                chat_.inputCodepoints(),
+                chat_.tuning().maximumMessageCodepoints
+            );
+        }
     } else if (inputStatusTimer_ > 0.0f && !inputStatus_.empty()) {
         SDL_snprintf(
             title,
@@ -1865,6 +1946,16 @@ void HakuiApp::updateHud()
             static_cast<int>(pause.size()), pause.data(),
             debugRenderer_.lookSensitivity(),
             audio_.volume() * 100.0f,
+            static_cast<int>(device.size()), device.data()
+        );
+    } else if (runtime_.characterStoryInteractionActive()) {
+        const auto& storySession = runtime_.characterStory().session();
+        SDL_snprintf(
+            title,
+            sizeof(title),
+            "HAKUI v1.01 // THE REAPER // STORY INTERACTION // TURN %u // ENTER TALK // %.*s LEAVE // CANON CONTENT UNAUTHORED // INPUT %.*s",
+            storySession.playerTurnCount,
+            static_cast<int>(cancel.size()), cancel.data(),
             static_cast<int>(device.size()), device.data()
         );
     } else if (combat_.active()) {
@@ -1986,6 +2077,18 @@ void HakuiApp::updateHud()
             static_cast<int>(device.size()), device.data()
         );
     } else {
+        if (runtime_.independentCharacterInInteractionRange(
+                hakui::character::CharacterId::Reaper)) {
+            SDL_snprintf(
+                title,
+                sizeof(title),
+                "HAKUI v1.01 // THE REAPER // %.*s TALK // STORY AUTHORITY READY // ENTER CHAT // %.*s",
+                static_cast<int>(interact.size()), interact.data(),
+                static_cast<int>(device.size()), device.data()
+            );
+            SDL_SetWindowTitle(window_, title);
+            return;
+        }
         if (spiralPresenceView.playerInRange) {
             SDL_snprintf(
                 title,
@@ -2212,7 +2315,15 @@ void HakuiApp::update(float dt)
         }
 
         if (inputFrame_.action(Action::Cancel).pressed) {
-            if (combat_.active()) {
+            if (runtime_.characterStoryInteractionActive()) {
+                (void)runtime_.endCharacterStoryInteraction();
+                debugRenderer_.setCameraRole(CameraRole::GameplayFollow);
+                showInputStatus("STORY INTERACTION CLOSED", 2.4f);
+                recordObserverEvent(
+                    "story.interaction",
+                    "character conversation closed"
+                );
+            } else if (combat_.active()) {
                 toggleCombat();
             } else if (player_.activity != PlayerActivity::Roaming) {
                 leaveCurrentInteraction();
@@ -2236,19 +2347,23 @@ void HakuiApp::update(float dt)
         }
 
         if (inputFrame_.action(Action::SelectOnFoot).pressed &&
-            player_.activity == PlayerActivity::Roaming && !combat_.active()) {
+            player_.activity == PlayerActivity::Roaming && !combat_.active() &&
+            !runtime_.characterStoryInteractionActive()) {
             switchLocomotion(LocomotionMode::OnFoot, "on_foot");
         }
         if (inputFrame_.action(Action::SelectSkateboard).pressed &&
-            player_.activity == PlayerActivity::Roaming && !combat_.active()) {
+            player_.activity == PlayerActivity::Roaming && !combat_.active() &&
+            !runtime_.characterStoryInteractionActive()) {
             requestRideLocomotion(LocomotionMode::Skateboard, "skateboard");
         }
         if (inputFrame_.action(Action::SelectBmx).pressed &&
-            player_.activity == PlayerActivity::Roaming && !combat_.active()) {
+            player_.activity == PlayerActivity::Roaming && !combat_.active() &&
+            !runtime_.characterStoryInteractionActive()) {
             requestRideLocomotion(LocomotionMode::BMX, "bmx");
         }
         if (inputFrame_.action(Action::SelectCar).pressed &&
-            player_.activity == PlayerActivity::Roaming && !combat_.active()) {
+            player_.activity == PlayerActivity::Roaming && !combat_.active() &&
+            !runtime_.characterStoryInteractionActive()) {
             switchLocomotion(LocomotionMode::Car, "car");
         }
 
@@ -2279,9 +2394,13 @@ void HakuiApp::update(float dt)
             );
 
         hakui::MovementInput movementInput;
+        const bool storyInteractionLocked =
+            runtime_.characterStoryInteractionActive();
         const bool rideActive = player_.locomotion == LocomotionMode::Skateboard ||
             player_.locomotion == LocomotionMode::BMX;
-        if (rideActive) {
+        if (storyInteractionLocked) {
+            movementInput = {};
+        } else if (rideActive) {
             const float moveMagnitude = std::min(
                 1.0f,
                 std::sqrt(inputRight * inputRight + inputForward * inputForward)
@@ -2305,6 +2424,7 @@ void HakuiApp::update(float dt)
             movementInput.sprint = embodimentIntent.accelerate > 0.20f;
         }
         movementInput.jumpPressed =
+            !storyInteractionLocked &&
             embodimentIntent.traversal == hakui::input::TraversalIntent::Jump;
 
         hakui::MovementStep movementStep;
@@ -2509,6 +2629,8 @@ bool HakuiApp::render()
     scene.paused = paused_;
     scene.rideable = rideable_.state();
     scene.chatInputActive = chat_.inputActive();
+    scene.characterStoryDialogueActive =
+        runtime_.characterStoryInteractionActive();
     scene.chatInputBuffer = chat_.inputBuffer();
     scene.chatHistory = &chat_.history();
     scene.localSpeakerId = 1;
