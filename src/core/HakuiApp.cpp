@@ -1543,18 +1543,21 @@ void HakuiApp::commitChatInput()
     }
 
     const std::string prompt = chat_.inputBuffer();
-    const bool routeToStory = runtime_.characterStoryInteractionActive();
+    const bool fullRuntime = hakui::native_runtime_full(runtimeProfile_);
+    const bool routeToStory =
+        fullRuntime && runtime_.characterStoryInteractionActive();
     const hakui::SpiralPresenceView presence = spiralPresence_.view(
         hakui::SpiralPresence::defaultNearbyRadius,
         cortexStatus_
     );
     const std::optional<hakui::intent::IntentProposal> naturalProposal =
-        routeToStory
-            ? std::nullopt
-            : hakui::intent::IntentProposalParser::parsePlayerCommand(
-                prompt, nextProposalId_);
+        (fullRuntime && !routeToStory)
+            ? hakui::intent::IntentProposalParser::parsePlayerCommand(
+                prompt, nextProposalId_)
+            : std::nullopt;
     const bool routeToCortex =
-        !routeToStory && presence.playerInRange && !naturalProposal;
+        fullRuntime && !routeToStory &&
+        presence.playerInRange && !naturalProposal;
 
     const hakui::social::ChatMessage* message = chat_.commitLocal(
         1,
@@ -1712,6 +1715,10 @@ void HakuiApp::cancelChatInput()
 
 void HakuiApp::refreshCortexBinding()
 {
+    if (!hakui::native_runtime_full(runtimeProfile_)) {
+        cortexStatus_ = {};
+        return;
+    }
     if (cortexStatus_.busy) {
         return;
     }
@@ -1742,6 +1749,9 @@ void HakuiApp::refreshCortexBinding()
 
 void HakuiApp::beginCortexRequest(std::string prompt)
 {
+    if (!hakui::native_runtime_full(runtimeProfile_)) {
+        return;
+    }
     if (prompt.empty()) {
         return;
     }
@@ -1791,6 +1801,9 @@ void HakuiApp::beginCortexRequest(std::string prompt)
 
 void HakuiApp::pollCortex()
 {
+    if (!hakui::native_runtime_full(runtimeProfile_)) {
+        return;
+    }
     std::optional<hakui::SpiralCortexReply> reply;
     {
         std::lock_guard<std::mutex> lock(cortexMailbox_->mutex);
