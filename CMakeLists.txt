@@ -238,6 +238,20 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
         target_compile_options(hakui_female_mannequin_lab PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
+    if(BUILD_TESTING)
+        add_executable(hakui_runtime_profile_spec
+            tests/hakui/RuntimeProfileSpec.cpp
+        )
+        target_include_directories(hakui_runtime_profile_spec PRIVATE src)
+        target_compile_features(hakui_runtime_profile_spec PRIVATE cxx_std_20)
+        if(MSVC)
+            target_compile_options(hakui_runtime_profile_spec PRIVATE /W4 /permissive- /UNDEBUG)
+        else()
+            target_compile_options(hakui_runtime_profile_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+        endif()
+        add_test(NAME hakui.runtime_profile COMMAND hakui_runtime_profile_spec)
+    endif()
+
     if(WIN32)
         target_link_libraries(hakui PRIVATE gdiplus)
         target_link_libraries(hakui_mannequin_lab PRIVATE gdiplus)
