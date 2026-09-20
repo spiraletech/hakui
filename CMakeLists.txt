@@ -21,6 +21,7 @@ include(cmake/SpiralCore.cmake)
 include(cmake/HakuiAvatarRig.cmake)
 include(cmake/HakuiInteraction.cmake)
 include(cmake/HakuiGameplay.cmake)
+include(cmake/HakuiBodyPose.cmake)
 include(cmake/HakuiInput.cmake)
 include(cmake/HakuiSocial.cmake)
 include(cmake/HakuiObserver.cmake)
@@ -168,6 +169,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             SDL3::SDL3
             hakui_avatar_rig
             hakui_gameplay
+            hakui_body_pose
             hakui_social
             hakui_camera
             hakui_combat
@@ -205,6 +207,7 @@ if(HAKUI_BUILD_NATIVE_CLIENT)
             SDL3::SDL3
             hakui_avatar_rig
             hakui_gameplay
+            hakui_body_pose
             hakui_social
             hakui_camera
             hakui_combat
