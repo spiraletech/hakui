@@ -15,6 +15,7 @@
 #include "combat/CombatSimulation.hpp"
 #include "action/HakuiNpcActionExecutor.hpp"
 #include "core/GameRuntime.hpp"
+#include "core/NativeRuntimeProfile.hpp"
 #include "home/HomeSession.hpp"
 #include "games/GameTerminal.hpp"
 #include "interaction/InteractionService.hpp"
@@ -82,6 +83,7 @@ private:
     bool cameraDragging_ = false;
     int cameraCaptureWarmupFrames_ = 0;
     bool paused_ = false;
+    hakui::NativeRuntimeProfile runtimeProfile_{hakui::NativeRuntimeProfile::Core};
     bool quitRequested_ = false;
     bool developerRideFallback_ = false;
     bool alternateFootstep_ = false;
