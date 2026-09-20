@@ -29,6 +29,20 @@
 
 namespace {
 
+hakui::RoomInteractionFocus runtimeRoomInteractionFocus(
+    const hakui::BlackRoom& room,
+    const PlayerState& player,
+    hakui::NativeRuntimeProfile profile
+) noexcept
+{
+    hakui::RoomInteractionFocus focus = room.nearestInteraction(player);
+    if (!hakui::native_runtime_features(profile).tabletop &&
+        focus.kind == hakui::RoomInteractionKind::FusionTable) {
+        return {};
+    }
+    return focus;
+}
+
 const char* combatStateLabel(hakui::combat::CombatState state) noexcept
 {
     using hakui::combat::CombatState;
@@ -681,7 +695,8 @@ hakui::observer::CaptureContext HakuiApp::buildObserverContext() const
         );
     } else if (player_.activity == PlayerActivity::CouchSeated) {
         context.currentInteractionIntent = "STAND";
-    } else if (blackRoom_.nearestInteraction(player_)) {
+    } else if (runtimeRoomInteractionFocus(
+                   blackRoom_, player_, runtimeProfile_)) {
         context.currentInteractionIntent = "INTERACT";
     }
 
@@ -1199,7 +1214,7 @@ void HakuiApp::handlePrimaryInteraction()
     }
 
     const hakui::RoomInteractionFocus focus =
-        blackRoom_.nearestInteraction(player_);
+        runtimeRoomInteractionFocus(blackRoom_, player_, runtimeProfile_);
     if (!focus) {
         SDL_Log("[HAKUI] no interaction in range");
         return;
@@ -2275,7 +2290,8 @@ void HakuiApp::updateHud()
             SDL_SetWindowTitle(window_, title);
             return;
         }
-        const hakui::RoomInteractionFocus focus = blackRoom_.nearestInteraction(player_);
+        const hakui::RoomInteractionFocus focus =
+            runtimeRoomInteractionFocus(blackRoom_, player_, runtimeProfile_);
         if (focus) {
             SDL_snprintf(
                 title,
