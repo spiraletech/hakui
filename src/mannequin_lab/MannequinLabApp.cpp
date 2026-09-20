@@ -32,6 +32,21 @@ const std::array<hakui::WorldPrimitive, 7> kStudio{{
 
 constexpr float kPi = 3.14159265358979323846f;
 
+hakui::MovementEnvironment labMovementEnvironment() noexcept
+{
+    hakui::MovementEnvironment environment;
+    environment.floorMinimumX = -3.75f;
+    environment.floorMaximumX = 3.75f;
+    environment.floorMinimumZ = -3.40f;
+    environment.floorMaximumZ = 3.40f;
+    environment.floorHeight = 0.0f;
+    environment.voidResetHeight = -8.0f;
+    environment.spawnX = 0.0f;
+    environment.spawnY = 0.0f;
+    environment.spawnZ = 0.0f;
+    return environment;
+}
+
 #if defined(HAKUI_FEMALE_MANNEQUIN)
 constexpr bool kFemaleMannequinLab = true;
 constexpr const char* kLabWindowTitle =
@@ -75,13 +90,14 @@ bool MannequinLabApp::boot()
     mannequin_.grounded = true;
     mannequin_.idlePhase = 0.0f;
 
-    applyPreset(PosePreset::Neutral);
+    applyPreset(PosePreset::Locomotion);
     renderer_.resetCamera();
     previousCounter_ = SDL_GetPerformanceCounter();
     updateWindowTitle();
 
-    SDL_Log("[MANNEQUIN LAB] 1 neutral // 2 T // 3 A // 4 crouch // 5 ollie pop");
-    SDL_Log("[MANNEQUIN LAB] Q/E pelvis // A/D torso yaw // W/S torso lean // [/] knees");
+    SDL_Log("[MANNEQUIN LAB] 0 live locomotion // 1 neutral // 2 T // 3 A // 4 crouch // 5 ollie pop");
+    SDL_Log("[MANNEQUIN LAB] LIVE // WASD move // SHIFT run // SPACE jump");
+    SDL_Log("[MANNEQUIN LAB] POSE // Q/E pelvis // Z/X torso yaw // C/V torso lean // [/] knees");
     SDL_Log("[MANNEQUIN LAB] J joints // arrows rotate mannequin // RMB orbit // wheel zoom // R camera // ESC quit");
     return true;
 }
@@ -144,6 +160,8 @@ void MannequinLabApp::applyPreset(PosePreset preset)
     pose_.footContact = hakui::RideFootContactState::Anchored;
 
     switch (preset_) {
+        case PosePreset::Locomotion:
+            break;
         case PosePreset::Neutral:
             pose_.leftKneeFlex = 0.18f;
             pose_.rightKneeFlex = 0.18f;
@@ -218,6 +236,7 @@ void MannequinLabApp::adjustTorsoLean(float delta)
 std::string_view MannequinLabApp::poseLabel() const noexcept
 {
     switch (preset_) {
+        case PosePreset::Locomotion: return "LIVE";
         case PosePreset::Neutral: return "NEUTRAL";
         case PosePreset::TPose: return "T-POSE";
         case PosePreset::APose: return "A-POSE";
@@ -227,6 +246,20 @@ std::string_view MannequinLabApp::poseLabel() const noexcept
     return "UNKNOWN";
 }
 
+hakui::body::BodyPosePreset MannequinLabApp::solverPreset() const noexcept
+{
+    using hakui::body::BodyPosePreset;
+    switch (preset_) {
+        case PosePreset::Locomotion: return BodyPosePreset::Locomotion;
+        case PosePreset::Neutral: return BodyPosePreset::Neutral;
+        case PosePreset::TPose: return BodyPosePreset::TPose;
+        case PosePreset::APose: return BodyPosePreset::APose;
+        case PosePreset::Crouch: return BodyPosePreset::Crouch;
+        case PosePreset::OlliePop: return BodyPosePreset::OlliePop;
+    }
+    return BodyPosePreset::Locomotion;
+}
+
 void MannequinLabApp::updateWindowTitle()
 {
     if (!window_) return;
@@ -234,14 +267,17 @@ void MannequinLabApp::updateWindowTitle()
     SDL_snprintf(
         title,
         sizeof(title),
-        "%s // %.*s // PELVIS %.2f // TORSO %.2f // LEAN %.2f // KNEES %.2f/%.2f // JOINTS %s",
+        "%s // %.*s // %s // SPEED %.2f // PELVIS %.2f // TORSO %.2f // LEAN %.2f // JOINTS %s",
         kLabDynamicTitle,
         static_cast<int>(poseLabel().size()), poseLabel().data(),
+        mannequin_.grounded ? "GROUNDED" : "AIRBORNE",
+        std::sqrt(
+            mannequin_.velocityX * mannequin_.velocityX +
+            mannequin_.velocityZ * mannequin_.velocityZ
+        ),
         pose_.pelvisYawRelativeToBoard,
         pose_.torsoYawRelativeToBoard,
         pose_.torsoLean,
-        pose_.leftKneeFlex,
-        pose_.rightKneeFlex,
         showJoints_ ? "ON" : "OFF"
     );
     SDL_SetWindowTitle(window_, title);
@@ -282,6 +318,7 @@ SDL_AppResult MannequinLabApp::handleEvent(const SDL_Event& event)
     bool poseChanged = true;
     switch (event.key.scancode) {
         case SDL_SCANCODE_ESCAPE: return SDL_APP_SUCCESS;
+        case SDL_SCANCODE_0: applyPreset(PosePreset::Locomotion); break;
         case SDL_SCANCODE_1: applyPreset(PosePreset::Neutral); break;
         case SDL_SCANCODE_2: applyPreset(PosePreset::TPose); break;
         case SDL_SCANCODE_3: applyPreset(PosePreset::APose); break;
@@ -289,12 +326,18 @@ SDL_AppResult MannequinLabApp::handleEvent(const SDL_Event& event)
         case SDL_SCANCODE_5: applyPreset(PosePreset::OlliePop); break;
         case SDL_SCANCODE_Q: adjustPelvisYaw(-0.08f * repeatScale); break;
         case SDL_SCANCODE_E: adjustPelvisYaw(0.08f * repeatScale); break;
-        case SDL_SCANCODE_A: adjustTorsoYaw(-0.07f * repeatScale); break;
-        case SDL_SCANCODE_D: adjustTorsoYaw(0.07f * repeatScale); break;
-        case SDL_SCANCODE_W: adjustTorsoLean(-0.05f * repeatScale); break;
-        case SDL_SCANCODE_S: adjustTorsoLean(0.05f * repeatScale); break;
+        case SDL_SCANCODE_Z: adjustTorsoYaw(-0.07f * repeatScale); break;
+        case SDL_SCANCODE_X: adjustTorsoYaw(0.07f * repeatScale); break;
+        case SDL_SCANCODE_C: adjustTorsoLean(-0.05f * repeatScale); break;
+        case SDL_SCANCODE_V: adjustTorsoLean(0.05f * repeatScale); break;
         case SDL_SCANCODE_LEFTBRACKET: adjustKnees(-0.07f * repeatScale); break;
         case SDL_SCANCODE_RIGHTBRACKET: adjustKnees(0.07f * repeatScale); break;
+        case SDL_SCANCODE_SPACE:
+            if (!event.key.repeat && preset_ == PosePreset::Locomotion) {
+                jumpQueued_ = true;
+            }
+            poseChanged = false;
+            break;
         case SDL_SCANCODE_LEFT:
             mannequin_.yaw -= 0.10f * repeatScale;
             break;
@@ -325,8 +368,51 @@ SDL_AppResult MannequinLabApp::tick()
     previousCounter_ = now;
     dt = std::clamp(dt, 0.0f, 0.10f);
 
-    mannequin_.idlePhase += dt * 0.55f;
+    hakui::MovementInput movementInput;
+    if (preset_ == PosePreset::Locomotion) {
+        const bool* keys = SDL_GetKeyboardState(nullptr);
+        movementInput.forward =
+            (keys[SDL_SCANCODE_W] ? 1.0f : 0.0f) -
+            (keys[SDL_SCANCODE_S] ? 1.0f : 0.0f);
+        movementInput.right =
+            (keys[SDL_SCANCODE_D] ? 1.0f : 0.0f) -
+            (keys[SDL_SCANCODE_A] ? 1.0f : 0.0f);
+        movementInput.sprint =
+            keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT];
+        movementInput.jumpPressed = jumpQueued_;
+    }
+    jumpQueued_ = false;
+
+    const hakui::MovementStep movementStep = movement_.update(
+        mannequin_,
+        movementInput,
+        labMovementEnvironment(),
+        dt
+    );
+    mannequin_.sprinting = movementStep.sprinting;
+    const float targetMovementBlend =
+        movementStep.moved && mannequin_.grounded
+            ? (movementStep.sprinting ? 1.0f : 0.62f)
+            : 0.0f;
+    const float blendResponse = 1.0f - std::exp(-12.0f * dt);
+    mannequin_.movementBlend +=
+        (targetMovementBlend - mannequin_.movementBlend) * blendResponse;
+    mannequin_.idlePhase += 1.8f * dt;
+    if (movementStep.moved && mannequin_.grounded) {
+        mannequin_.gaitPhase +=
+            (movementStep.sprinting ? 11.0f : 7.2f) * dt;
+    }
+
+    hakui::body::BodyPoseSolveInput solveInput;
+    solveInput.bodyProfile = kFemaleMannequinLab
+        ? hakui::avatar::BodyProfileId::Female
+        : hakui::avatar::BodyProfileId::Male;
+    solveInput.preset = solverPreset();
+    solveInput.mechanics = pose_;
+    solvedPose_ = poseSolver_.solve(mannequin_, solveInput);
+
     renderer_.updateCamera(dt, mannequin_);
+    updateWindowTitle();
     if (!render()) {
         return SDL_APP_FAILURE;
     }
@@ -363,6 +449,7 @@ bool MannequinLabApp::render()
     scene.mannequinShowJoints = showJoints_;
     scene.mannequinPosePreset = static_cast<std::uint8_t>(preset_);
     scene.mannequinPoseLabel = poseLabel();
+    scene.mannequinBodyPose = solvedPose_;
     scene.rideable.body = pose_;
     scene.rideable.phase = hakui::RidePhase::Grounded;
     scene.localDisplayName = "";
