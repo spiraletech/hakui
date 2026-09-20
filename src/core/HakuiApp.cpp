@@ -2379,7 +2379,7 @@ void HakuiApp::update(float dt)
         // ChatInput has exclusive ownership. Simulation time and idle/social
         // presentation continue, while locomotion, combat, interaction, ride,
         // camera, pause, and developer actions consume no sampled hardware.
-        runtime_.advanceWorld(dt);
+        runtime_.advanceWorld(dt, hakui::native_runtime_full(runtimeProfile_));
         spiral_.tick(dt);
         rideControls_.reset();
         rideControlFrame_ = {};
@@ -2427,7 +2427,7 @@ void HakuiApp::update(float dt)
     }
 
     if (!paused_) {
-        runtime_.advanceWorld(dt);
+        runtime_.advanceWorld(dt, hakui::native_runtime_full(runtimeProfile_));
 
         const bool rideActiveAtInput =
             player_.locomotion == LocomotionMode::Skateboard ||
