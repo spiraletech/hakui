@@ -1334,6 +1334,8 @@ bool DebugWorldRenderer::render(
     }
     const hakui::AvatarGroundContactProfile& groundContact =
         hakui::avatarGroundContactProfile(embodiment);
+    const bool useSolvedMannequinPose =
+        scene.mannequinLab && scene.mannequinBodyPose.valid;
     const auto ridePoint = [](
         const hakui::RideAttachmentRig& rig,
         hakui::RideAnchorSemantic semantic,
@@ -1420,7 +1422,9 @@ bool DebugWorldRenderer::render(
     const Mat4 avatarRoot = multiply(
         translation({
             player.x,
-            player.y + bodyBob + groundContact.visualRootAbovePlayerBase,
+            player.y + (useSolvedMannequinPose
+                ? scene.mannequinBodyPose.rootHeightAbovePlayerBase
+                : bodyBob + groundContact.visualRootAbovePlayerBase),
             player.z
         }),
         multiply(
@@ -1486,6 +1490,9 @@ bool DebugWorldRenderer::render(
             : hakui::avatar::maleBodyProfile())
         : hakui::avatar::bodyProfile(scene.playerBodyProfile);
     const auto bodyVec = [](const hakui::avatar::Vec3f& value) {
+        return Vec3{value.x, value.y, value.z};
+    };
+    const auto poseVec = [](const hakui::body::BodyPosePoint& value) {
         return Vec3{value.x, value.y, value.z};
     };
 
@@ -1662,7 +1669,49 @@ bool DebugWorldRenderer::render(
         );
     };
 
-    if (scene.mannequinLab) {
+    const auto drawSolvedLeg = [&](const hakui::body::BodyLimbPose& limb) {
+        const Vec3 hip = poseVec(limb.proximal);
+        const Vec3 knee = poseVec(limb.middle);
+        const Vec3 foot = poseVec(limb.distal);
+        contactSegment(hip, knee, activeBody.thighRadius);
+        contactSegment(knee, foot, activeBody.calfRadius);
+        if (scene.mannequinShowJoints) {
+            localBox(hip, {0.12f, 0.12f, 0.12f}, Amber);
+            localBox(knee, {0.13f, 0.13f, 0.13f}, Magenta);
+            localBox(foot, {0.11f, 0.11f, 0.11f}, Cyan);
+        }
+        const Vec3 footForward =
+            rotateYawPoint({0.0f, 0.0f, 0.08f}, limb.distalYaw);
+        orientedLocalBox(
+            {
+                foot.x + footForward.x,
+                foot.y + 0.06f,
+                foot.z + footForward.z
+            },
+            bodyVec(activeBody.footSize),
+            limb.distalYaw,
+            Cyan
+        );
+    };
+
+    const auto drawSolvedArm = [&](const hakui::body::BodyLimbPose& limb) {
+        const Vec3 shoulder = poseVec(limb.proximal);
+        const Vec3 elbow = poseVec(limb.middle);
+        const Vec3 hand = poseVec(limb.distal);
+        contactSegment(shoulder, elbow, activeBody.upperArmRadius);
+        contactSegment(elbow, hand, activeBody.forearmRadius);
+        if (scene.mannequinShowJoints) {
+            localBox(shoulder, {0.12f, 0.12f, 0.12f}, Amber);
+            localBox(elbow, {0.12f, 0.12f, 0.12f}, Magenta);
+            localBox(hand, {0.10f, 0.10f, 0.10f}, Cyan);
+        }
+        localBox(hand, bodyVec(activeBody.handSize), Midnight);
+    };
+
+    if (useSolvedMannequinPose) {
+        drawSolvedLeg(scene.mannequinBodyPose.leftLeg);
+        drawSolvedLeg(scene.mannequinBodyPose.rightLeg);
+    } else if (scene.mannequinLab) {
         const float pelvisYaw = scene.rideable.body.pelvisYawRelativeToBoard;
         const float labFootSpread = scene.mannequinFemale ? 0.255f : 0.23f;
         Vec3 leftLabFoot = rotateYawPoint(
@@ -1726,25 +1775,36 @@ bool DebugWorldRenderer::render(
         leg(-1.0f, gait * stride, std::max(0.0f, -gait) * 0.58f);
         leg(1.0f, counterGait * stride, std::max(0.0f, -counterGait) * 0.58f);
     }
+    const Vec3 pelvisCenter = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.pelvisCenter)
+        : Vec3{
+            0.0f,
+            1.20f - scene.rideable.body.preloadPoseWeight *
+                (ridingSkateboard ? 0.20f : 0.10f) -
+                scene.rideable.body.landingCompression * 0.18f,
+            0.0f
+        };
+    const Vec3 waistCenter = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.waistCenter)
+        : Vec3{
+            0.0f,
+            1.32f - scene.rideable.body.preloadPoseWeight * 0.16f -
+                scene.rideable.body.landingCompression * 0.13f,
+            0.0f
+        };
+    const float pelvisYaw = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.pelvisYaw
+        : (poseDriven ? scene.rideable.body.pelvisYawRelativeToBoard : 0.0f);
     orientedLocalBox(
-        {0.0f,
-         1.20f - scene.rideable.body.preloadPoseWeight *
-             (ridingSkateboard ? 0.20f : 0.10f) -
-             scene.rideable.body.landingCompression * 0.18f,
-         0.0f},
+        pelvisCenter,
         bodyVec(activeBody.pelvisSize),
-        poseDriven ? scene.rideable.body.pelvisYawRelativeToBoard : 0.0f,
+        pelvisYaw,
         Midnight
     );
-    // Shared pelvis-to-waist bridge. This is presentation only and follows
-    // the active body profile without changing gameplay contact targets.
     orientedLocalBox(
-        {0.0f,
-         1.32f - scene.rideable.body.preloadPoseWeight * 0.16f -
-             scene.rideable.body.landingCompression * 0.13f,
-         0.0f},
+        waistCenter,
         bodyVec(activeBody.waistBridgeSize),
-        scene.rideable.body.pelvisYawRelativeToBoard,
+        pelvisYaw,
         Midnight
     );
 
@@ -1765,29 +1825,31 @@ bool DebugWorldRenderer::render(
             std::clamp(scene.rideable.rotationCompletion, 0.0f, 1.0f) * kPi
         )
         : 0.0f;
+    const Vec3 torsoCenter = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.torsoCenter)
+        : Vec3{0.0f, 1.72f + idleBreath - rideCompression, attackCommitment};
+    const float solvedTorsoYaw = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.torsoYaw
+        : (poseDriven ? scene.rideable.body.torsoYawRelativeToBoard : 0.0f);
+    const float solvedTorsoPitch = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.torsoPitch
+        : airborneLean + expressiveRideLean +
+            (poseDriven ? scene.rideable.body.torsoLean : 0.0f) +
+            socialTorsoPitch;
+    const float solvedTorsoRoll = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.torsoRoll
+        : bodySway + expressiveRideSway + impactLean +
+            bodyAssistVisual + socialTorsoRoll;
     const Mat4 torso = multiply(
         avatarRoot,
         multiply(
-            translation({
-                0.0f,
-                1.72f + idleBreath - rideCompression,
-                attackCommitment
-            }),
+            translation(torsoCenter),
             multiply(
-                rotationY(
-                    poseDriven ? scene.rideable.body.torsoYawRelativeToBoard : 0.0f
-                ),
+                rotationY(solvedTorsoYaw),
                 multiply(
-                    rotationX(
-                        airborneLean + expressiveRideLean +
-                        (poseDriven ? scene.rideable.body.torsoLean : 0.0f) +
-                        socialTorsoPitch
-                    ),
+                    rotationX(solvedTorsoPitch),
                     multiply(
-                        rotationZ(
-                            bodySway + expressiveRideSway + impactLean +
-                            bodyAssistVisual + socialTorsoRoll
-                        ),
+                        rotationZ(solvedTorsoRoll),
                         scale(bodyVec(activeBody.torsoFrame))
                     )
                 )
@@ -1816,14 +1878,24 @@ bool DebugWorldRenderer::render(
         torsoPalette
     );
 
-    const float torsoYaw = scene.rideable.body.torsoYawRelativeToBoard;
-    const Vec3 clavicleCenter = rotateYawPoint({0.0f, 2.12f, 0.0f}, torsoYaw);
-    const Vec3 leftShoulder = rotateYawPoint(
-        {-activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f}, torsoYaw
-    );
-    const Vec3 rightShoulder = rotateYawPoint(
-        {activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f}, torsoYaw
-    );
+    const float torsoYaw = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.torsoYaw
+        : scene.rideable.body.torsoYawRelativeToBoard;
+    const Vec3 clavicleCenter = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.clavicleCenter)
+        : rotateYawPoint({0.0f, 2.12f, 0.0f}, torsoYaw);
+    const Vec3 leftShoulder = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.leftArm.proximal)
+        : rotateYawPoint(
+            {-activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f},
+            torsoYaw
+        );
+    const Vec3 rightShoulder = useSolvedMannequinPose
+        ? poseVec(scene.mannequinBodyPose.rightArm.proximal)
+        : rotateYawPoint(
+            {activeBody.shoulderHalfWidth, activeBody.shoulderHeight, 0.0f},
+            torsoYaw
+        );
     contactSegment(clavicleCenter, leftShoulder, activeBody.clavicleRadius, Shell);
     contactSegment(clavicleCenter, rightShoulder, activeBody.clavicleRadius, Shell);
 
@@ -1856,7 +1928,10 @@ bool DebugWorldRenderer::render(
         scene.socialGesture == SocialGesture::GreetingWave) {
         rightArmAngle = -1.05f - 0.42f * socialWeight;
     }
-    if (scene.mannequinLab) {
+    if (useSolvedMannequinPose) {
+        drawSolvedArm(scene.mannequinBodyPose.leftArm);
+        drawSolvedArm(scene.mannequinBodyPose.rightArm);
+    } else if (scene.mannequinLab) {
         const float neutralHandX = scene.mannequinFemale ? 0.56f : 0.62f;
         Vec3 leftHand{-neutralHandX, 1.56f, 0.02f};
         Vec3 rightHand{neutralHandX, 1.56f, 0.02f};
@@ -1952,9 +2027,9 @@ bool DebugWorldRenderer::render(
         arm(-1.0f, leftArmAngle);
         arm(1.0f, rightArmAngle);
     }
-    const float headYaw = poseDriven
-        ? scene.rideable.body.headYawRelativeToBoard
-        : 0.0f;
+    const float headYaw = useSolvedMannequinPose
+        ? scene.mannequinBodyPose.headYaw
+        : (poseDriven ? scene.rideable.body.headYawRelativeToBoard : 0.0f);
     const auto socialHeadBox = [&](const Vec3& position,
                                    const Vec3& dimensions,
                                    Uint32 palette) {
@@ -1976,12 +2051,16 @@ bool DebugWorldRenderer::render(
         );
     };
     socialHeadBox(
-        {0.0f, 2.28f + idleBreath - rideCompression, 0.0f},
+        useSolvedMannequinPose
+            ? poseVec(scene.mannequinBodyPose.neckCenter)
+            : Vec3{0.0f, 2.28f + idleBreath - rideCompression, 0.0f},
         bodyVec(activeBody.neckSize),
         scene.mannequinLab ? Shell : Cyan
     );
     socialHeadBox(
-        {0.0f, 2.60f + idleBreath - rideCompression, 0.0f},
+        useSolvedMannequinPose
+            ? poseVec(scene.mannequinBodyPose.headCenter)
+            : Vec3{0.0f, 2.60f + idleBreath - rideCompression, 0.0f},
         bodyVec(activeBody.headSize),
         Shell
     );
