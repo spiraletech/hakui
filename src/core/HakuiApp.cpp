@@ -160,7 +160,19 @@ hakui::EmbodimentProfileId embodimentProfile(
 
 bool HakuiApp::boot()
 {
-    SDL_Log("[HAKUI] booting native client v1.01-dev // SKATE EMBODIMENT PASS");
+    SDL_Log("[HAKUI] booting native client v1.01-dev // CORE RESET 01");
+
+    if (const char* requestedProfile = SDL_getenv("HAKUI_RUNTIME_PROFILE");
+        requestedProfile && requestedProfile[0] != '\0') {
+        runtimeProfile_ = hakui::parse_native_runtime_profile(requestedProfile);
+    }
+    const bool fullRuntime = hakui::native_runtime_full(runtimeProfile_);
+    const std::string_view runtimeProfileLabel = hakui::to_string(runtimeProfile_);
+    SDL_Log(
+        "[HAKUI] runtime profile // %.*s // native C++",
+        static_cast<int>(runtimeProfileLabel.size()),
+        runtimeProfileLabel.data()
+    );
 
     if (!initPlatform() || !initGPU()) {
         return false;
@@ -189,7 +201,8 @@ bool HakuiApp::boot()
 
     if (const char* dialogueFixture =
             SDL_getenv("HAKUI_NEESHEGO_DIALOGUE_FIXTURE");
-        dialogueFixture && std::string_view{dialogueFixture} == "1") {
+        fullRuntime && dialogueFixture &&
+        std::string_view{dialogueFixture} == "1") {
         const bool installed = runtime_.installCharacterDialogueGraph(
             hakui::character::l25DeveloperDialogueFixture()
         );
@@ -201,17 +214,23 @@ bool HakuiApp::boot()
     }
 
     initSpiralCore();
-    refreshCortexBinding();
-    terminal_ = std::make_shared<hakui::games::GameTerminal>(
-        7001,
-        hakui::games::TerminalModel::FusionDeck
-    );
-    if (!interactions_.registerTarget(terminal_)) {
-        SDL_LogError(
-            SDL_LOG_CATEGORY_APPLICATION,
-            "[HAKUI] failed to register tabletop terminal"
+    if (fullRuntime) {
+        refreshCortexBinding();
+        terminal_ = std::make_shared<hakui::games::GameTerminal>(
+            7001,
+            hakui::games::TerminalModel::FusionDeck
         );
-        return false;
+        if (!interactions_.registerTarget(terminal_)) {
+            SDL_LogError(
+                SDL_LOG_CATEGORY_APPLICATION,
+                "[HAKUI] failed to register tabletop terminal"
+            );
+            return false;
+        }
+    } else {
+        SDL_Log(
+            "[HAKUI] CORE PROFILE // Cortex, Reaper story, tabletop and ambient NPC presentation disabled"
+        );
     }
     const hakui::MovementEnvironment room = blackRoom_.movementEnvironment();
     player_.x = room.spawnX;
@@ -1114,7 +1133,8 @@ void HakuiApp::handlePrimaryInteraction()
         return;
     }
 
-    if (runtime_.characterStoryInteractionActive()) {
+    if (hakui::native_runtime_full(runtimeProfile_) &&
+        runtime_.characterStoryInteractionActive()) {
         showInputStatus(
             "THE REAPER // STORY INTERACTION // ENTER TALK // ESC LEAVE",
             3.0f
@@ -1122,7 +1142,8 @@ void HakuiApp::handlePrimaryInteraction()
         return;
     }
 
-    if (player_.activity == PlayerActivity::Roaming &&
+    if (hakui::native_runtime_full(runtimeProfile_) &&
+        player_.activity == PlayerActivity::Roaming &&
         runtime_.independentCharacterInInteractionRange(
             hakui::character::CharacterId::Reaper)) {
         if (player_.locomotion != LocomotionMode::OnFoot) {
@@ -2227,7 +2248,8 @@ void HakuiApp::updateHud()
             static_cast<int>(device.size()), device.data()
         );
     } else {
-        if (runtime_.independentCharacterInInteractionRange(
+        if (hakui::native_runtime_full(runtimeProfile_) &&
+            runtime_.independentCharacterInInteractionRange(
                 hakui::character::CharacterId::Reaper)) {
             SDL_snprintf(
                 title,
@@ -2313,16 +2335,18 @@ void HakuiApp::update(float dt)
 
     inputFrame_ = inputBridge_.sample(gamepad_, dt, cameraDragging_);
     inputStatusTimer_ = std::max(0.0f, inputStatusTimer_ - dt);
-    cortexProbeTimer_ = std::max(0.0f, cortexProbeTimer_ - dt);
     chat_.update(dt);
-    pollCortex();
-    const hakui::SpiralPresenceView cortexPresence = spiralPresence_.view(
-        hakui::SpiralPresence::defaultNearbyRadius,
-        cortexStatus_
-    );
-    if (!cortexStatus_.busy && !cortexStatus_.bound &&
-        cortexPresence.playerInRange && cortexProbeTimer_ <= 0.0f) {
-        refreshCortexBinding();
+    if (hakui::native_runtime_full(runtimeProfile_)) {
+        cortexProbeTimer_ = std::max(0.0f, cortexProbeTimer_ - dt);
+        pollCortex();
+        const hakui::SpiralPresenceView cortexPresence = spiralPresence_.view(
+            hakui::SpiralPresence::defaultNearbyRadius,
+            cortexStatus_
+        );
+        if (!cortexStatus_.busy && !cortexStatus_.bound &&
+            cortexPresence.playerInRange && cortexProbeTimer_ <= 0.0f) {
+            refreshCortexBinding();
+        }
     }
     if (socialPreviewCaptureDelay_ > 0.0f) {
         socialPreviewCaptureDelay_ -= dt;
@@ -2762,8 +2786,10 @@ bool HakuiApp::render()
         cortexStatus_
     );
     HakuiSceneState scene;
-    scene.npcs = runtime_.npcs().states();
-    scene.spiralPresenceVisible = true;
+    if (hakui::native_runtime_full(runtimeProfile_)) {
+        scene.npcs = runtime_.npcs().states();
+    }
+    scene.spiralPresenceVisible = hakui::native_runtime_full(runtimeProfile_);
     scene.spiralPresenceLinked = spiralPresenceView.linked;
     scene.spiralPresencePlayerInRange = spiralPresenceView.playerInRange;
     scene.spiralNodeX = spiralPresenceView.nodeX;
@@ -2780,6 +2806,7 @@ bool HakuiApp::render()
     scene.rideable = rideable_.state();
     scene.chatInputActive = chat_.inputActive();
     scene.characterStoryDialogueActive =
+        hakui::native_runtime_full(runtimeProfile_) &&
         runtime_.characterStoryInteractionActive();
     scene.chatInputBuffer = chat_.inputBuffer();
     scene.chatHistory = &chat_.history();
