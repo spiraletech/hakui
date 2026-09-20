@@ -115,6 +115,33 @@ int main()
     assert(near(runtime.player().z, room.spawnZ));
     assert(near(runtime.player().money, 333.0f));
 
+    // CORE RESET 01: world time may advance without advancing optional cast
+    // simulation. Core HAKUI uses this path so hidden story/NPC systems are
+    // behaviorally dormant rather than merely omitted from rendering.
+    const hakui::NpcState* saelis =
+        runtime.npcs().find(hakui::NpcManager::saelisId);
+    const hakui::character::CharacterActorState* reaper =
+        runtime.independentCharacterActor(hakui::character::CharacterId::Reaper);
+    assert(saelis != nullptr);
+    assert(reaper != nullptr);
+    const std::uint64_t saelisTicks = saelis->simulationTicks;
+    const std::uint64_t reaperTicks = reaper->simulationTicks;
+
+    runtime.advanceWorld(1.0f, false);
+    assert(near(runtime.world().clock().seconds(), 1.0f));
+    assert(runtime.npcs().find(hakui::NpcManager::saelisId)->simulationTicks ==
+           saelisTicks);
+    assert(runtime.independentCharacterActor(
+               hakui::character::CharacterId::Reaper)->simulationTicks ==
+           reaperTicks);
+
+    runtime.advanceWorld(1.0f, true);
+    assert(runtime.npcs().find(hakui::NpcManager::saelisId)->simulationTicks >
+           saelisTicks);
+    assert(runtime.independentCharacterActor(
+               hakui::character::CharacterId::Reaper)->simulationTicks >
+           reaperTicks);
+
     runtime.interactionRegistry().clear();
     assert(runtime.interactionRegistry().targetCount() == 0);
 
