@@ -1,0 +1,38 @@
+name: HAKUI L10 NPC Native Integration
+
+on:
+  push:
+    branches:
+      - trinity/hakui-l10-npc-simulation
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-native-npc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout L10 branch
+        uses: actions/checkout@v4
+        with:
+          ref: trinity/hakui-l10-npc-simulation
+          fetch-depth: 0
+
+      - name: Apply deterministic L10 native integration
+        run: python tools/apply_l10_native_npc.py
+
+      - name: Validate patch whitespace
+        run: git diff --check
+
+      - name: Commit integrated resident presentation
+        shell: bash
+        run: |
+          if git diff --quiet -- src/core/HakuiApp.cpp src/render/DebugWorldRenderer.cpp src/spiral/hakui/SpiralCortexClient.cpp; then
+            echo "L10 native NPC integration already present; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/core/HakuiApp.cpp src/render/DebugWorldRenderer.cpp src/spiral/hakui/SpiralCortexClient.cpp
+          git commit -m "L10 — integrate resident simulation into native HAKUI"
+          git push origin HEAD:trinity/hakui-l10-npc-simulation

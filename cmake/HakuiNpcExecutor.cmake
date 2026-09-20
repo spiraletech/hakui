@@ -1,0 +1,25 @@
+include(${CMAKE_CURRENT_LIST_DIR}/DependencyFirewall.cmake)
+hakui_enforce_first_party_firewall("Hakui L14 NPC Executor"
+    ${CMAKE_CURRENT_LIST_DIR}/../src/action/HakuiNpcActionExecutor.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/action/HakuiNpcActionExecutor.cpp)
+add_library(hakui_npc_executor STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/../src/action/HakuiNpcActionExecutor.cpp)
+target_include_directories(hakui_npc_executor PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../src)
+target_compile_features(hakui_npc_executor PUBLIC cxx_std_20)
+target_link_libraries(hakui_npc_executor PUBLIC hakui_gameplay hakui_intent)
+if(MSVC)
+    target_compile_options(hakui_npc_executor PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(hakui_npc_executor PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+if(BUILD_TESTING)
+    add_executable(hakui_npc_executor_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/HakuiNpcActionExecutorSpec.cpp)
+    target_link_libraries(hakui_npc_executor_spec PRIVATE hakui_npc_executor)
+    if(MSVC)
+        target_compile_options(hakui_npc_executor_spec PRIVATE /W4 /permissive- /UNDEBUG)
+    else()
+        target_compile_options(hakui_npc_executor_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+    endif()
+    add_test(NAME hakui.npc_executor COMMAND hakui_npc_executor_spec)
+endif()
