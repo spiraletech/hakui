@@ -5,6 +5,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "body/BodyPoseSolver.hpp"
+#include "player/PlayerMovementController.hpp"
 #include "player/PlayerState.hpp"
 #include "player/RideableMovementController.hpp"
 #include "render/DebugWorldRenderer.hpp"
@@ -19,7 +21,8 @@ public:
 
 private:
     enum class PosePreset : unsigned char {
-        Neutral = 0,
+        Locomotion = 0,
+        Neutral,
         TPose,
         APose,
         Crouch,
@@ -36,15 +39,20 @@ private:
     void adjustTorsoYaw(float delta);
     void adjustTorsoLean(float delta);
     std::string_view poseLabel() const noexcept;
+    hakui::body::BodyPosePreset solverPreset() const noexcept;
 
 private:
     SDL_Window* window_ = nullptr;
     SDL_GPUDevice* gpu_ = nullptr;
     DebugWorldRenderer renderer_{};
     PlayerState mannequin_{};
+    hakui::PlayerMovementController movement_{};
+    hakui::body::BodyPoseSolver poseSolver_{};
+    hakui::body::BodyPoseState solvedPose_{};
     hakui::RideBodyMechanicsState pose_{};
-    PosePreset preset_ = PosePreset::Neutral;
+    PosePreset preset_ = PosePreset::Locomotion;
     bool showJoints_ = true;
     bool cameraDragging_ = false;
+    bool jumpQueued_ = false;
     Uint64 previousCounter_ = 0;
 };
