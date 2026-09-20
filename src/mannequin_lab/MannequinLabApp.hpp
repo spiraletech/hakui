@@ -21,12 +21,12 @@ public:
 
 private:
     enum class PosePreset : unsigned char {
-        Locomotion = 0,
-        Neutral,
+        Neutral = 0,
         TPose,
         APose,
         Crouch,
-        OlliePop
+        OlliePop,
+        Locomotion = 255
     };
 
     bool initPlatform();
