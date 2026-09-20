@@ -426,11 +426,14 @@ public:
     RideableMovementController& rideable() noexcept { return player_.rideable(); }
     const RideableMovementController& rideable() const noexcept { return player_.rideable(); }
 
-    void advanceWorld(float deltaSeconds) noexcept
+    void advanceWorld(
+        float deltaSeconds,
+        bool simulateCharacters = true
+    ) noexcept
     {
         const std::uint64_t beforeStep = world_.clock().step();
         world_.advance(deltaSeconds);
-        if (world_.clock().step() != beforeStep) {
+        if (world_.clock().step() != beforeStep && simulateCharacters) {
             npcs_.tick(world_.blackRoom(), player_.state(), deltaSeconds);
             characterActors_.tick(
                 player_.state().x,
