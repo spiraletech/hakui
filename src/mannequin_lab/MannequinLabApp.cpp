@@ -383,10 +383,12 @@ SDL_AppResult MannequinLabApp::tick()
     }
     jumpQueued_ = false;
 
+    const hakui::MovementEnvironment movementEnvironment =
+        labMovementEnvironment();
     const hakui::MovementStep movementStep = movement_.update(
         mannequin_,
         movementInput,
-        labMovementEnvironment(),
+        movementEnvironment,
         dt
     );
     mannequin_.sprinting = movementStep.sprinting;
@@ -409,7 +411,50 @@ SDL_AppResult MannequinLabApp::tick()
         : hakui::avatar::BodyProfileId::Male;
     solveInput.preset = solverPreset();
     solveInput.mechanics = pose_;
-    solvedPose_ = poseSolver_.solve(mannequin_, solveInput);
+
+    const hakui::body::BodyPoseState nominalPose =
+        poseSolver_.solve(mannequin_, solveInput);
+
+    hakui::body::BodyConstraintInput constraintInput;
+    constraintInput.rootX = mannequin_.x;
+    constraintInput.rootY = mannequin_.y;
+    constraintInput.rootZ = mannequin_.z;
+    constraintInput.rootYaw = mannequin_.yaw;
+    constraintInput.deltaTime = dt;
+    constraintInput.movementBlend = mannequin_.movementBlend;
+    constraintInput.grounded = mannequin_.grounded;
+    constraintInput.enabled = preset_ == PosePreset::Locomotion;
+
+    const auto sampleStudioFloor = [&](
+        const hakui::body::BodyPosePoint& localFoot
+    ) {
+        const float cosine = std::cos(mannequin_.yaw);
+        const float sine = std::sin(mannequin_.yaw);
+        hakui::body::FootGroundSample sample;
+        sample.valid = mannequin_.grounded;
+        sample.point = {
+            mannequin_.x +
+                localFoot.x * cosine +
+                localFoot.z * sine,
+            movementEnvironment.floorHeight,
+            mannequin_.z -
+                localFoot.x * sine +
+                localFoot.z * cosine
+        };
+        sample.normal = {0.0f, 1.0f, 0.0f};
+        return sample;
+    };
+
+    constraintInput.leftGround =
+        sampleStudioFloor(nominalPose.leftLeg.distal);
+    constraintInput.rightGround =
+        sampleStudioFloor(nominalPose.rightLeg.distal);
+
+    solvedPose_ = constraintSolver_.solve(
+        nominalPose,
+        constraintInput,
+        constraintState_
+    );
 
     renderer_.updateCamera(dt, mannequin_);
     updateWindowTitle();

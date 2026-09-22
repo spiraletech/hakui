@@ -132,6 +132,30 @@ float smoothToward(float current, float target, float response, float deltaSecon
     return current + (target - current) * blend;
 }
 
+float shortestAngleDelta(float current, float target) noexcept
+{
+    float delta = target - current;
+    while (delta > kPi) {
+        delta -= 2.0f * kPi;
+    }
+    while (delta < -kPi) {
+        delta += 2.0f * kPi;
+    }
+    return delta;
+}
+
+float smoothAngleToward(
+    float current,
+    float target,
+    float response,
+    float deltaSeconds
+) noexcept
+{
+    const float blend =
+        1.0f - std::exp(-response * std::max(deltaSeconds, 0.0f));
+    return current + shortestAngleDelta(current, target) * blend;
+}
+
 using GlyphRows = std::array<std::uint8_t, 7>;
 
 GlyphRows glyphRows(char source) noexcept
@@ -282,7 +306,15 @@ void DebugWorldRenderer::updateCamera(float deltaSeconds, const PlayerState& pla
     cameraTargetX_ = smoothToward(cameraTargetX_, desiredTargetX, 8.0f, deltaSeconds);
     cameraTargetY_ = smoothToward(cameraTargetY_, desiredTargetY, 8.0f, deltaSeconds);
     cameraTargetZ_ = smoothToward(cameraTargetZ_, desiredTargetZ, 8.0f, deltaSeconds);
-    cameraYaw_ = smoothToward(cameraYaw_, cameraRig_.yaw(), 14.0f, deltaSeconds);
+    // Yaw is circular. Linear interpolation across the -pi/+pi seam makes
+    // a tiny continued orbit look like a nearly full revolution, producing
+    // the visible camera "yank" reported in the mannequin lab.
+    cameraYaw_ = smoothAngleToward(
+        cameraYaw_,
+        cameraRig_.yaw(),
+        14.0f,
+        deltaSeconds
+    );
     cameraPitch_ = smoothToward(cameraPitch_, cameraRig_.pitch(), 14.0f, deltaSeconds);
     cameraDistance_ = smoothToward(
         cameraDistance_,

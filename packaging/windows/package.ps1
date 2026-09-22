@@ -37,6 +37,15 @@ if (-not $hakuiExecutable) {
     throw "hakui.exe was not found under $resolvedBuild"
 }
 
+$mannequinLab = Get-ChildItem -LiteralPath $resolvedBuild -Filter 'HAKUI-MANNEQUIN-LAB.exe' -Recurse |
+    Select-Object -First 1
+if (-not $mannequinLab) {
+    throw "HAKUI-MANNEQUIN-LAB.exe was not found under $resolvedBuild"
+}
+
+$femaleMannequinLab = Get-ChildItem -LiteralPath $resolvedBuild -Filter 'HAKUI-FEMALE-MANNEQUIN-LAB.exe' -Recurse |
+    Select-Object -First 1
+
 $sdlRuntime = Get-ChildItem -LiteralPath $resolvedBuild -Filter 'SDL3.dll' -Recurse |
     Select-Object -First 1
 if (-not $sdlRuntime) {
@@ -45,6 +54,12 @@ if (-not $sdlRuntime) {
 
 Copy-Item -LiteralPath $hakuiExecutable.FullName `
     -Destination (Join-Path $packDirectory 'SPIRAL-OS-HAKUI-ENGINE.exe')
+Copy-Item -LiteralPath $mannequinLab.FullName `
+    -Destination (Join-Path $packDirectory 'HAKUI-MANNEQUIN-LAB.exe')
+if ($femaleMannequinLab) {
+    Copy-Item -LiteralPath $femaleMannequinLab.FullName `
+        -Destination (Join-Path $packDirectory 'HAKUI-FEMALE-MANNEQUIN-LAB.exe')
+}
 Copy-Item -LiteralPath $sdlRuntime.FullName -Destination $packDirectory
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'START_HERE.txt') `
     -Destination $packDirectory
