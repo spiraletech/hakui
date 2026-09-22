@@ -46,8 +46,16 @@ void ThirdPersonCameraRig::orbit(
     float verticalDelta
 ) noexcept
 {
-    horizontalDelta = finiteOr(horizontalDelta, 0.0f);
-    verticalDelta = finiteOr(verticalDelta, 0.0f);
+    horizontalDelta = std::clamp(
+        finiteOr(horizontalDelta, 0.0f),
+        -240.0f,
+        240.0f
+    );
+    verticalDelta = std::clamp(
+        finiteOr(verticalDelta, 0.0f),
+        -240.0f,
+        240.0f
+    );
     yaw_ = wrapYaw(yaw_ - horizontalDelta * config_.lookSensitivity);
     pitch_ = std::clamp(
         pitch_ - verticalDelta * config_.lookSensitivity,
