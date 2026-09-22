@@ -221,7 +221,7 @@ BodyPosePoint chooseFootTarget(
             horizontalError <= rig.plantAcquireDistance;
         const bool stableIdle =
             input.movementBlend <= 0.08f &&
-            verticalError <= rig.plantReleaseHeight &&
+            verticalError <= rig.maxPelvisDrop &&
             horizontalError <= rig.plantAcquireDistance;
 
         if (nearSurface || stableIdle) {
