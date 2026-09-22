@@ -5,6 +5,7 @@
 
 #include <SDL3/SDL.h>
 
+#include "body/BodyConstraintSolver.hpp"
 #include "body/BodyPoseSolver.hpp"
 #include "player/PlayerMovementController.hpp"
 #include "player/PlayerState.hpp"
@@ -48,6 +49,8 @@ private:
     PlayerState mannequin_{};
     hakui::PlayerMovementController movement_{};
     hakui::body::BodyPoseSolver poseSolver_{};
+    hakui::body::BodyConstraintSolver constraintSolver_{};
+    hakui::body::BodyConstraintState constraintState_{};
     hakui::body::BodyPoseState solvedPose_{};
     hakui::RideBodyMechanicsState pose_{};
     PosePreset preset_ = PosePreset::Locomotion;

@@ -18,6 +18,7 @@ hakui_enforce_first_party_firewall(
 
 add_library(hakui_body_pose STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../src/body/BodyPoseSolver.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/../src/body/BodyConstraintSolver.cpp
 )
 
 target_include_directories(hakui_body_pose
@@ -56,7 +57,20 @@ if(HAKUI_ENABLE_BODY_POSE_SPECS)
         target_compile_options(hakui_body_pose_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
+    add_executable(hakui_body_constraint_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/BodyConstraintSolverSpec.cpp
+    )
+    target_compile_features(hakui_body_constraint_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_body_constraint_spec PRIVATE hakui_body_pose)
+
+    if(MSVC)
+        target_compile_options(hakui_body_constraint_spec PRIVATE /W4 /permissive- /UNDEBUG)
+    else()
+        target_compile_options(hakui_body_constraint_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+    endif()
+
     if(BUILD_TESTING)
         add_test(NAME hakui.body_pose COMMAND hakui_body_pose_spec)
+        add_test(NAME hakui.body_constraint COMMAND hakui_body_constraint_spec)
     endif()
 endif()
