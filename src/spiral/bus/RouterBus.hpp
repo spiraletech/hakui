@@ -2,7 +2,8 @@
 
 #include <cstddef>
 #include <functional>
-#include <unordered_map>
+#include <map>
+#include <memory>
 #include <vector>
 
 #include "spiral/core/SpiralTypes.hpp"
@@ -29,7 +30,12 @@ public:
 private:
     ListenerId nextListenerId_ = 1;
     SignalId nextSignalId_ = 1;
-    std::unordered_map<ListenerId, Listener> listeners_;
+    // Stable ascending subscription order is required for reproducible
+    // synchronous observer delivery. Shared callback ownership keeps mutable
+    // subscription state intact across emission snapshots while allowing
+    // unsubscribe during dispatch without invalidating in-flight listeners.
+    // Not an audio-thread-safe or concurrent event bus.
+    std::map<ListenerId, std::shared_ptr<Listener>> listeners_;
 };
 
 } // namespace spiral

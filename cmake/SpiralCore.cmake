@@ -75,4 +75,18 @@ if(HAKUI_ENABLE_SPIRAL_LOGIC_SPECS)
     if(BUILD_TESTING)
         add_test(NAME spiral.logic COMMAND spiral_logic_spec)
     endif()
+    # SAELIS E23: deterministic observer delivery and mutable callback identity.
+    add_executable(spiral_router_observer_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/spiral/RouterBusObserverSpec.cpp
+    )
+    target_link_libraries(spiral_router_observer_spec PRIVATE spiral_core)
+    target_compile_features(spiral_router_observer_spec PRIVATE cxx_std_20)
+    if(MSVC)
+        target_compile_options(spiral_router_observer_spec PRIVATE /W4 /permissive- /UNDEBUG)
+    else()
+        target_compile_options(spiral_router_observer_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+    endif()
+    if(BUILD_TESTING)
+        add_test(NAME spiral.router.observer COMMAND spiral_router_observer_spec)
+    endif()
 endif()
