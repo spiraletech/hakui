@@ -79,6 +79,18 @@ std::vector<InteractionOption> InteractionService::options(EntityId actor, Entit
 
 InteractionResult InteractionService::interact(const InteractionRequest& request)
 {
+    const auto key = std::make_pair(request.actor, request.target);
+    if (!activeInteractions_.insert(key).second) {
+        // Router observers are synchronous. Do not emit another request/error
+        // for a recursive duplicate: an error observer could recurse too.
+        return {};
+    }
+    struct InFlightCleanup {
+        std::set<std::pair<EntityId, EntityId>>& active;
+        std::pair<EntityId, EntityId> key;
+        ~InFlightCleanup() { active.erase(key); }
+    } cleanup{activeInteractions_, key};
+
     emitRequest(request);
 
     if (request.actor == 0) {

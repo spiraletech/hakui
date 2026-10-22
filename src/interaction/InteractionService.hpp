@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <memory>
+#include <set>
+#include <utility>
 #include <unordered_map>
 #include <vector>
 
@@ -39,6 +41,9 @@ private:
 private:
     spiral::RouterBus& bus_;
     std::unordered_map<EntityId, std::weak_ptr<Interactable>> targets_;
+    // Per actor/target in-flight guard: observers cannot recursively dispatch
+    // the same interaction while the original request is being handled.
+    std::set<std::pair<EntityId, EntityId>> activeInteractions_;
 };
 
 } // namespace hakui

@@ -65,8 +65,21 @@ if(HAKUI_ENABLE_INTERACTION_SPECS)
         target_compile_options(hakui_interaction_registration_identity_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
     endif()
 
+    # Reentrant Router Bus observers must not dispatch the same interaction twice.
+    add_executable(hakui_interaction_reentrancy_spec
+        ${CMAKE_CURRENT_LIST_DIR}/../tests/hakui/InteractionReentrancySpec.cpp
+    )
+    target_compile_features(hakui_interaction_reentrancy_spec PRIVATE cxx_std_20)
+    target_link_libraries(hakui_interaction_reentrancy_spec PRIVATE hakui_interaction)
+    if(MSVC)
+        target_compile_options(hakui_interaction_reentrancy_spec PRIVATE /W4 /permissive- /UNDEBUG)
+    else()
+        target_compile_options(hakui_interaction_reentrancy_spec PRIVATE -Wall -Wextra -Wpedantic -UNDEBUG)
+    endif()
+
     if(BUILD_TESTING)
         add_test(NAME hakui.interaction COMMAND hakui_interaction_spec)
         add_test(NAME hakui.interaction.registration_identity COMMAND hakui_interaction_registration_identity_spec)
+        add_test(NAME hakui.interaction.reentrancy COMMAND hakui_interaction_reentrancy_spec)
     endif()
 endif()
