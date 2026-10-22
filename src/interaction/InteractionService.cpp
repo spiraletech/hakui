@@ -23,11 +23,16 @@ InteractionService::InteractionService(spiral::RouterBus& bus)
 
 bool InteractionService::registerTarget(const std::shared_ptr<Interactable>& target)
 {
-    if (!target || target->interactionId() == 0) {
+    if (!target) {
         return false;
     }
 
+    // Validate the exact identity used as the registration key. Calling a
+    // virtual getter twice may yield different IDs or trigger side effects.
     const EntityId id = target->interactionId();
+    if (id == 0) {
+        return false;
+    }
     const auto it = targets_.find(id);
     if (it != targets_.end()) {
         if (!it->second.expired()) {
