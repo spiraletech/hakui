@@ -108,6 +108,61 @@ void stable_registration_remains_executable() {
     assert(service.interact(request).handled);
     assert(target->executions == 1);
 }
+
+void removed_target_cannot_offer_stale_menu() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(600);
+    assert(service.registerTarget(target));
+    target->onOptions = [&]() { assert(service.unregisterTarget(600)); };
+    assert(service.options(7, 600).empty());
+    assert(service.targetCount() == 0);
+}
+void replaced_target_cannot_offer_old_menu() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto original = std::make_shared<ReplacingTarget>(601);
+    auto replacement = std::make_shared<ReplacingTarget>(601);
+    assert(service.registerTarget(original));
+    original->onOptions = [&]() {
+        assert(service.unregisterTarget(601));
+        assert(service.registerTarget(replacement));
+    };
+    assert(service.options(7, 601).empty());
+    assert(service.options(7, 601).size() == 1);
+}
+void same_instance_aba_cannot_offer_stale_menu() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(602);
+    assert(service.registerTarget(target));
+    bool changed = false;
+    target->onOptions = [&]() {
+        if (changed) return;
+        changed = true;
+        assert(service.unregisterTarget(602));
+        assert(service.registerTarget(target));
+    };
+    assert(service.options(7, 602).empty());
+    assert(service.options(7, 602).size() == 1);
+}
+void unrelated_registration_does_not_hide_menu() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(603);
+    auto unrelated = std::make_shared<ReplacingTarget>(604);
+    assert(service.registerTarget(target));
+    target->onOptions = [&]() { assert(service.registerTarget(unrelated)); };
+    assert(service.options(7, 603).size() == 1);
+}
+void stable_registration_offers_menu() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(605);
+    assert(service.registerTarget(target));
+    assert(service.options(7, 605).size() == 1);
+    assert(service.options(7, 999).empty());
+}
 }
 int main() {
     replacement_during_options_cannot_execute_stale_target();
@@ -115,4 +170,9 @@ int main() {
     unrelated_registration_change_does_not_cancel_dispatch();
     same_instance_reregistration_revokes_original_dispatch();
     stable_registration_remains_executable();
+    removed_target_cannot_offer_stale_menu();
+    replaced_target_cannot_offer_old_menu();
+    same_instance_aba_cannot_offer_stale_menu();
+    unrelated_registration_does_not_hide_menu();
+    stable_registration_offers_menu();
 }
