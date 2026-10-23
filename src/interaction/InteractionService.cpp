@@ -35,13 +35,13 @@ bool InteractionService::registerTarget(const std::shared_ptr<Interactable>& tar
     }
     const auto it = targets_.find(id);
     if (it != targets_.end()) {
-        if (!it->second.expired()) {
+        if (!it->second.target.expired()) {
             return false;
         }
         targets_.erase(it);
     }
 
-    targets_[id] = target;
+    targets_[id] = {target, nextRegistrationToken_++};
     return true;
 }
 
@@ -53,7 +53,7 @@ bool InteractionService::unregisterTarget(EntityId id)
 void InteractionService::pruneExpired()
 {
     for (auto it = targets_.begin(); it != targets_.end();) {
-        if (it->second.expired()) {
+        if (it->second.target.expired()) {
             it = targets_.erase(it);
         } else {
             ++it;
@@ -104,7 +104,18 @@ InteractionResult InteractionService::interact(const InteractionRequest& request
         return {};
     }
 
+    // The options callback may synchronously revoke or replace its own
+    // registration. Check the token as well as the object to prevent ABA
+    // re-registration of the same shared_ptr from authorizing stale work.
+    const std::uint64_t registrationToken = targets_.at(request.target).token;
     const auto offered = object->interactionOptions(request.actor);
+    const auto current = targets_.find(request.target);
+    if (current == targets_.end() || current->second.token != registrationToken ||
+        current->second.target.lock() != object) {
+        emitError(request, "interaction.target_changed",
+                  "target registration changed during options lookup");
+        return {};
+    }
     if (!offersVerb(offered, request.verb)) {
         emitError(request, "interaction.denied", "requested verb is not currently offered");
         return {};
@@ -131,7 +142,7 @@ std::shared_ptr<Interactable> InteractionService::findTarget(EntityId id)
         return {};
     }
 
-    auto target = it->second.lock();
+    auto target = it->second.target.lock();
     if (!target) {
         targets_.erase(it);
     }
