@@ -40,7 +40,14 @@ private:
 
 private:
     spiral::RouterBus& bus_;
-    std::unordered_map<EntityId, std::weak_ptr<Interactable>> targets_;
+    // Every successful registration receives a fresh identity token. A target
+    // may unregister/re-register itself during a synchronous options callback.
+    struct Registration {
+        std::weak_ptr<Interactable> target;
+        std::uint64_t token = 0;
+    };
+    std::unordered_map<EntityId, Registration> targets_;
+    std::uint64_t nextRegistrationToken_ = 1;
     // Per actor/target in-flight guard: observers cannot recursively dispatch
     // the same interaction while the original request is being handled.
     std::set<std::pair<EntityId, EntityId>> activeInteractions_;
