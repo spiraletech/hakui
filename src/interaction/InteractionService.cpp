@@ -74,7 +74,17 @@ std::vector<InteractionOption> InteractionService::options(EntityId actor, Entit
         return {};
     }
 
-    return object->interactionOptions(actor);
+    // A synchronous options callback may unregister or replace its target.
+    // Never expose options from a registration that is no longer current.
+    // Identity tokens also reject unregister/re-register of the same object.
+    const std::uint64_t registrationToken = targets_.at(target).token;
+    auto offered = object->interactionOptions(actor);
+    const auto current = targets_.find(target);
+    if (current == targets_.end() || current->second.token != registrationToken ||
+        current->second.target.lock() != object) {
+        return {};
+    }
+    return offered;
 }
 
 InteractionResult InteractionService::interact(const InteractionRequest& request)
