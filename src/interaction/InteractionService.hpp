@@ -52,6 +52,8 @@ private:
     // Per actor/target in-flight guard: observers cannot recursively dispatch
     // the same interaction while the original request is being handled.
     std::set<std::pair<EntityId, EntityId>> activeInteractions_;
+    // Suppress same actor/target menu recursion without blocking independent lookups.
+    std::set<std::pair<EntityId, EntityId>> activeOptionLookups_;
 };
 
 } // namespace hakui

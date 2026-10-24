@@ -1,6 +1,7 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include "interaction/InteractionService.hpp"
@@ -163,6 +164,66 @@ void stable_registration_offers_menu() {
     assert(service.options(7, 605).size() == 1);
     assert(service.options(7, 999).empty());
 }
+
+void recursive_same_pair_options_lookup_is_suppressed() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(606);
+    assert(service.registerTarget(target));
+    int calls = 0;
+    bool nestedHadMenu = true;
+    target->onOptions = [&]() {
+        ++calls;
+        if (calls == 1) nestedHadMenu = !service.options(7, 606).empty();
+    };
+    assert(service.options(7, 606).size() == 1);
+    assert(calls == 1);
+    assert(!nestedHadMenu);
+    // The guard must be released after normal completion.
+    assert(service.options(7, 606).size() == 1);
+    assert(calls == 2);
+}
+
+void independent_options_lookups_remain_available() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto first = std::make_shared<ReplacingTarget>(607);
+    auto second = std::make_shared<ReplacingTarget>(608);
+    assert(service.registerTarget(first));
+    assert(service.registerTarget(second));
+    int calls = 0;
+    bool differentActorOffered = false;
+    bool differentTargetOffered = false;
+    first->onOptions = [&]() {
+        ++calls;
+        if (calls == 1) {
+            differentActorOffered = service.options(8, 607).size() == 1;
+            differentTargetOffered = service.options(7, 608).size() == 1;
+        }
+    };
+    assert(service.options(7, 607).size() == 1);
+    assert(calls == 2);
+    assert(differentActorOffered && differentTargetOffered);
+}
+
+void exception_during_options_lookup_releases_guard() {
+    spiral::RouterBus bus;
+    hakui::InteractionService service(bus);
+    auto target = std::make_shared<ReplacingTarget>(609);
+    assert(service.registerTarget(target));
+    bool fail = true;
+    target->onOptions = [&]() {
+        if (fail) {
+            fail = false;
+            throw std::runtime_error("options callback failed");
+        }
+    };
+    bool caught = false;
+    try { (void)service.options(7, 609); }
+    catch (const std::runtime_error&) { caught = true; }
+    assert(caught);
+    assert(service.options(7, 609).size() == 1);
+}
 }
 int main() {
     replacement_during_options_cannot_execute_stale_target();
@@ -175,4 +236,7 @@ int main() {
     same_instance_aba_cannot_offer_stale_menu();
     unrelated_registration_does_not_hide_menu();
     stable_registration_offers_menu();
+    recursive_same_pair_options_lookup_is_suppressed();
+    independent_options_lookups_remain_available();
+    exception_during_options_lookup_releases_guard();
 }
