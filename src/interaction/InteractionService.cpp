@@ -69,6 +69,18 @@ std::size_t InteractionService::targetCount()
 
 std::vector<InteractionOption> InteractionService::options(EntityId actor, EntityId target)
 {
+    // A target may synchronously ask for its own menu while computing it.
+    // Reject only identical in-flight lookups; unrelated actors/targets work.
+    const auto key = std::make_pair(actor, target);
+    if (!activeOptionLookups_.insert(key).second) {
+        return {};
+    }
+    struct LookupCleanup {
+        std::set<std::pair<EntityId, EntityId>>& active;
+        std::pair<EntityId, EntityId> key;
+        ~LookupCleanup() { active.erase(key); }
+    } cleanup{activeOptionLookups_, key};
+
     const auto object = findTarget(target);
     if (!object) {
         return {};
