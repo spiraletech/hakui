@@ -69,6 +69,12 @@ std::size_t InteractionService::targetCount()
 
 std::vector<InteractionOption> InteractionService::options(EntityId actor, EntityId target)
 {
+    // A zero actor has no authority to query capabilities or trigger callbacks.
+    // Keep menu discovery consistent with interact()'s invalid_actor gate.
+    if (actor == 0) {
+        return {};
+    }
+
     // A target may synchronously ask for its own menu while computing it.
     // Reject only identical in-flight lookups; unrelated actors/targets work.
     const auto key = std::make_pair(actor, target);
